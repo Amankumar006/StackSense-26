@@ -1,0 +1,205 @@
+{
+  "scenario_id": "P4",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Serverless architecture combining React Native (Expo) frontend and Spring Boot backend with Amazon Aurora PostgreSQL hosted on AWS ECS Fargate. Estimated monthly infrastructure cost ranges from $170 to $555.",
+  "architecture_style": "serverless",
+  "stack": {
+    "frontend": {
+      "choice": "React Native (Expo)",
+      "justification": "Cross-platform architecture supporting Android, iOS, and Web from a unified TypeScript/JavaScript codebase with offline SQLite support.",
+      "driven_by": [
+        "project.platforms",
+        "team.languages"
+      ],
+      "alternatives": [
+        {
+          "choice": "Flutter",
+          "why_not": "Team skills center on JavaScript/TypeScript rather than Dart."
+        }
+      ],
+      "tradeoffs": [
+        "Native platform bridges required for specialized hardware integrations."
+      ]
+    },
+    "backend": {
+      "choice": "Spring Boot",
+      "justification": "Industry-standard enterprise framework providing robust ACID transaction boundaries, mature double-entry accounting libraries, and compliance support for RBI and PCI-DSS.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "compliance",
+        "team.languages",
+        "requirements.availability"
+      ],
+      "alternatives": [
+        {
+          "choice": "FastAPI",
+          "why_not": "Python lacks enterprise transaction management maturity and strict type-safe JVM thread isolation needed for banking ledgers."
+        }
+      ],
+      "tradeoffs": [
+        "Higher baseline RAM consumption (512MB\u20131GB JVM memory floor)."
+      ]
+    },
+    "database": {
+      "choice": "Amazon Aurora PostgreSQL",
+      "justification": "Multi-AZ synchronous replication with automated 30-second failover, continuous backups to S3, and physical data localization in AWS Mumbai (ap-south-1).",
+      "driven_by": [
+        "project.type",
+        "scale.data_volume_gb_12_months",
+        "requirements.availability",
+        "compliance",
+        "scale.workload"
+      ],
+      "alternatives": [
+        {
+          "choice": "Self-Hosted PostgreSQL on EC2",
+          "why_not": "Fails automated multi-AZ failover and point-in-time recovery without complex manual Patroni setup."
+        }
+      ],
+      "tradeoffs": [
+        "Higher minimum cost threshold ($60+/mo baseline)."
+      ]
+    },
+    "hosting": {
+      "choice": "AWS ECS Fargate",
+      "justification": "Serverless container compute in AWS Mumbai (ap-south-1) with VPC isolation, IAM roles, and certifications meeting RBI and PCI-DSS compliance.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "infrastructure.cloud_preference",
+        "compliance",
+        "scale.users_12_months"
+      ],
+      "alternatives": [
+        {
+          "choice": "AWS EC2 (Self-Managed)",
+          "why_not": "Requires manual OS patching, AMI baking, and custom auto-scaling scripts; Fargate eliminates operational maintenance."
+        }
+      ],
+      "tradeoffs": [
+        "Containers do not scale to zero; minimum monthly container run cost applies."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "storage",
+        "choice": "Amazon S3",
+        "justification": "Durable, encrypted cloud object storage for user document and photo uploads with presigned URL access.",
+        "driven_by": [
+          "requirements.file_media_storage",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Local Disk Storage",
+            "why_not": "Local container disks are ephemeral and lose user uploads on container restarts."
+          }
+        ],
+        "tradeoffs": [
+          "Outbound internet data egress transfer costs."
+        ]
+      },
+      {
+        "layer": "payments",
+        "choice": "Razorpay Payment Gateway",
+        "justification": "PCI-DSS compliant payment integration supporting cards, netbanking, and digital wallets without holding sensitive payment data.",
+        "driven_by": [
+          "requirements.payments",
+          "infrastructure.data_residency"
+        ],
+        "alternatives": [
+          {
+            "choice": "Stripe",
+            "why_not": "Stripe lacks native zero-fee UPI and Indian domestic netbanking settlement options."
+          }
+        ],
+        "tradeoffs": [
+          "2% transaction processing fee."
+        ]
+      },
+      {
+        "layer": "auth",
+        "choice": "Firebase Auth (Phone OTP)",
+        "justification": "Authentication service resolving phone_otp requirements with secure token issuance.",
+        "driven_by": [
+          "requirements.auth",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Twilio Verify Custom",
+            "why_not": "Building custom SMS OTP verification requires maintaining SMS gateways and credential token databases."
+          }
+        ],
+        "tradeoffs": [
+          "Vendor SDK dependency."
+        ]
+      },
+      {
+        "layer": "queue",
+        "choice": "Amazon SQS FIFO",
+        "justification": "Durable, exactly-once ordered message queue for decoupled background ledger processing and webhook delivery.",
+        "driven_by": [
+          "compliance",
+          "scale.users_12_months",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "RabbitMQ Self-Hosted",
+            "why_not": "RabbitMQ requires dedicated cluster maintenance, clustering plugins, and disk management."
+          }
+        ],
+        "tradeoffs": [
+          "Throughput capped at 3,000 messages/sec with batching."
+        ]
+      },
+      {
+        "layer": "ml",
+        "choice": "AWS SageMaker Serverless Inference",
+        "justification": "Serverless model endpoint running credit scoring inference on demand, scaling to zero when idle.",
+        "driven_by": [
+          "requirements.ml_features"
+        ],
+        "alternatives": [
+          {
+            "choice": "Dedicated EC2 GPU Instance",
+            "why_not": "Dedicated GPU instances cost $150+/month even during zero-traffic idle periods."
+          }
+        ],
+        "tradeoffs": [
+          "Initial cold start delay when spinning up idle containers."
+        ]
+      },
+      {
+        "layer": "observability",
+        "choice": "OpenTelemetry + Prometheus",
+        "justification": "Vendor-neutral distributed tracing and metrics required to monitor SLA breaches and system health.",
+        "driven_by": [
+          "requirements.availability"
+        ],
+        "alternatives": [
+          {
+            "choice": "Datadog",
+            "why_not": "Proprietary commercial observability with unpredictable host/metric volume bills."
+          }
+        ],
+        "tradeoffs": [
+          "Requires configuring dashboard scraping and metric retention storage."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 170.0,
+    "max": 555.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [],
+  "assumptions": [],
+  "validation_errors": []
+}

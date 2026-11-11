@@ -1,0 +1,144 @@
+{
+  "scenario_id": "E10",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Serverless architecture combining React Native (Expo) frontend and FastAPI backend with PostgreSQL hosted on Google Cloud Run (asia-south1). Estimated monthly infrastructure cost ranges from $40 to $150.",
+  "architecture_style": "serverless",
+  "stack": {
+    "frontend": {
+      "choice": "React Native (Expo)",
+      "justification": "Cross-platform architecture supporting Android, iOS, and Web from a unified TypeScript/JavaScript codebase with offline SQLite support.",
+      "driven_by": [
+        "project.platforms",
+        "team.languages"
+      ],
+      "alternatives": [
+        {
+          "choice": "Flutter",
+          "why_not": "Team skills center on JavaScript/TypeScript rather than Dart."
+        }
+      ],
+      "tradeoffs": [
+        "Native platform bridges required for specialized hardware integrations."
+      ]
+    },
+    "backend": {
+      "choice": "FastAPI",
+      "justification": "Asynchronous Python framework with automatic OpenAPI documentation and Pydantic validation; enables rapid MVP development.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "team.languages",
+        "timeline.mvp_weeks"
+      ],
+      "alternatives": [
+        {
+          "choice": "Django",
+          "why_not": "FastAPI is more lightweight, provides native async performance, and integrates better with mobile APIs."
+        }
+      ],
+      "tradeoffs": [
+        "Requires explicit worker process management (Uvicorn / Gunicorn) for multi-core scaling."
+      ]
+    },
+    "database": {
+      "choice": "PostgreSQL",
+      "justification": "ACID-compliant relational database with JSONB support, indexing, and full text search; available as a managed service across all major clouds.",
+      "driven_by": [
+        "project.type",
+        "scale.data_volume_gb_12_months",
+        "scale.workload",
+        "priorities.cost"
+      ],
+      "alternatives": [
+        {
+          "choice": "MongoDB",
+          "why_not": "Lacks native relational foreign key integrity and ACID guarantees needed for structured transactional data."
+        }
+      ],
+      "tradeoffs": [
+        "Requires connection pooling (e.g. PgBouncer) under high concurrent connection spikes."
+      ]
+    },
+    "hosting": {
+      "choice": "Google Cloud Run (asia-south1)",
+      "justification": "Managed serverless container platform scaling to zero when idle; data center in Mumbai meets India data residency while staying well within the monthly budget.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "budget.monthly_infra_usd",
+        "team.has_devops",
+        "infrastructure.data_residency"
+      ],
+      "alternatives": [
+        {
+          "choice": "AWS ECS Fargate",
+          "why_not": "Fargate incurs fixed minimum compute costs without scale-to-zero, consuming more of a tight $100\u2013$150 budget."
+        }
+      ],
+      "tradeoffs": [
+        "Occasional 1\u20132 second cold starts on new container scaling instances."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "storage",
+        "choice": "Amazon S3",
+        "justification": "Durable, encrypted cloud object storage for user document and photo uploads with presigned URL access.",
+        "driven_by": [
+          "requirements.file_media_storage",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Local Disk Storage",
+            "why_not": "Local container disks are ephemeral and lose user uploads on container restarts."
+          }
+        ],
+        "tradeoffs": [
+          "Outbound internet data egress transfer costs."
+        ]
+      },
+      {
+        "layer": "auth",
+        "choice": "Supabase Auth / NextAuth",
+        "justification": "Authentication service resolving email_password requirements with secure token issuance.",
+        "driven_by": [
+          "requirements.auth",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Custom JWT Auth",
+            "why_not": "Rolling custom authentication risks token vulnerabilities and password hashing security flaws."
+          }
+        ],
+        "tradeoffs": [
+          "Vendor SDK dependency."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 40.0,
+    "max": 150.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [
+    {
+      "code": "SKILL_MISMATCH_MOBILE_LANGUAGES",
+      "severity": "info",
+      "message": "Team possesses skills in python, but target platforms include mobile. The engine recommends React Native or Flutter, requiring team onboarding for UI development.",
+      "fields": [
+        "team.languages",
+        "project.platforms"
+      ]
+    }
+  ],
+  "assumptions": [
+    "requirements.p95_latency_ms defaulted to null"
+  ],
+  "validation_errors": []
+}

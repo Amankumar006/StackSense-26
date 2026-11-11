@@ -1,0 +1,130 @@
+{
+  "scenario_id": "P5",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Modular monolith architecture combining React (Vite) frontend and ASP.NET Core (.NET 8) backend with Microsoft SQL Server hosted on Azure App Service. Estimated monthly infrastructure cost ranges from $55 to $205.",
+  "architecture_style": "modular_monolith",
+  "stack": {
+    "frontend": {
+      "choice": "React (Vite)",
+      "justification": "Lightweight client-rendered SPA provides rapid interactive state management with minimal framework overhead.",
+      "driven_by": [
+        "project.platforms",
+        "priorities.performance"
+      ],
+      "alternatives": [
+        {
+          "choice": "Next.js",
+          "why_not": "Server-side rendering runtime unnecessary for authenticated, non-SEO internal/SaaS app."
+        }
+      ],
+      "tradeoffs": [
+        "Initial bundle download before client hydration."
+      ]
+    },
+    "backend": {
+      "choice": "ASP.NET Core (.NET 8)",
+      "justification": "High-throughput compiled backend offering first-class integration with Microsoft Entra ID and SQL Server.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "infrastructure.existing_systems",
+        "team.languages"
+      ],
+      "alternatives": [
+        {
+          "choice": "Node.js (Express)",
+          "why_not": "Lacks native enterprise integration with existing Microsoft 365 and on-prem SQL Server infrastructure."
+        }
+      ],
+      "tradeoffs": [
+        "Tighter coupling with Microsoft developer ecosystem."
+      ]
+    },
+    "database": {
+      "choice": "Microsoft SQL Server",
+      "justification": "Direct integration with existing on-premise SQL Server 2019 and Azure SQL ecosystem, preserving existing data schemas.",
+      "driven_by": [
+        "project.type",
+        "scale.data_volume_gb_12_months",
+        "infrastructure.existing_systems"
+      ],
+      "alternatives": [
+        {
+          "choice": "PostgreSQL",
+          "why_not": "Migrating existing enterprise SQL Server data and stored procedures adds significant project risk."
+        }
+      ],
+      "tradeoffs": [
+        "Commercial licensing costs if scaled to dedicated instances."
+      ]
+    },
+    "hosting": {
+      "choice": "Azure App Service",
+      "justification": "Managed PaaS deployment in Azure Central India (Pune) with automated OS patching and native Entra ID authentication integration.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "infrastructure.cloud_preference",
+        "infrastructure.data_residency"
+      ],
+      "alternatives": [
+        {
+          "choice": "Google Cloud Run",
+          "why_not": "Incompatible with explicit cloud preference for Azure and lacks native Entra ID managed identity hooks."
+        }
+      ],
+      "tradeoffs": [
+        "Higher compute plan cost when scaling to premium dedicated hardware."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "storage",
+        "choice": "Azure Blob Storage",
+        "justification": "Durable, encrypted cloud object storage for user document and photo uploads with presigned URL access.",
+        "driven_by": [
+          "requirements.file_media_storage",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Local Disk Storage",
+            "why_not": "Local container disks are ephemeral and lose user uploads on container restarts."
+          }
+        ],
+        "tradeoffs": [
+          "Outbound internet data egress transfer costs."
+        ]
+      },
+      {
+        "layer": "auth",
+        "choice": "Microsoft Entra ID (Azure AD)",
+        "justification": "Authentication service resolving enterprise_sso requirements with secure token issuance.",
+        "driven_by": [
+          "requirements.auth",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Auth0",
+            "why_not": "Auth0 adds high per-user enterprise tier pricing, whereas Entra ID natively links with existing corporate M365 directories."
+          }
+        ],
+        "tradeoffs": [
+          "Vendor SDK dependency."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 55.0,
+    "max": 205.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [],
+  "assumptions": [],
+  "validation_errors": []
+}

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stacksense"
+version = "0.1.0"
+description = "An explainable technology-stack recommendation engine."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+stacksense = "stacksense.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

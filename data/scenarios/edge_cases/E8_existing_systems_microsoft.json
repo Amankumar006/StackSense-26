@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "E8",
+  "project": {
+    "name": "Enterprise Warehouse Fleet Management",
+    "description": "Internal asset tracking system extending corporate Microsoft SQL Server database with Entra ID employee single-sign-on.",
+    "type": "internal_tool",
+    "platforms": ["web", "desktop"]
+  },
+  "scale": {
+    "users_at_launch": 800,
+    "users_12_months": 3500,
+    "traffic_pattern": "steady",
+    "workload": "balanced",
+    "data_volume_gb_12_months": 120
+  },
+  "team": {
+    "size": 3,
+    "experience": "intermediate",
+    "languages": ["csharp", "typescript"],
+    "has_devops": false
+  },
+  "budget": {
+    "monthly_infra_usd": 400
+  },
+  "timeline": {
+    "mvp_weeks": 10
+  },
+  "infrastructure": {
+    "cloud_preference": "azure",
+    "deployment_model": "managed_cloud",
+    "data_residency": "india",
+    "existing_systems": [
+      "Microsoft SQL Server 2019 (Enterprise Cluster)",
+      "Microsoft Entra ID (Azure Active Directory)"
+    ]
+  },
+  "compliance": ["iso27001"],
+  "requirements": {
+    "realtime": false,
+    "offline_support": false,
+    "full_text_search": false,
+    "file_media_storage": true,
+    "payments": false,
+    "multi_tenant": false,
+    "seo_critical": false,
+    "auth": "enterprise_sso",
+    "ml_features": "none",
+    "availability": "99.9"
+  },
+  "priorities": {
+    "cost": 3,
+    "performance": 3,
+    "time_to_market": 4,
+    "developer_experience": 4,
+    "ease_of_maintenance": 5
+  }
+}

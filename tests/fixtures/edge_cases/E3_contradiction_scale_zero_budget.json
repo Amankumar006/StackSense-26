@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "E3",
+  "project": {
+    "name": "Zero-Budget Viral Network",
+    "description": "A high-traffic social network expecting hundreds of thousands of active users with no operating budget.",
+    "type": "social",
+    "platforms": ["web", "android"]
+  },
+  "scale": {
+    "users_at_launch": 50000,
+    "users_12_months": 250000,
+    "traffic_pattern": "spiky",
+    "workload": "write_heavy",
+    "data_volume_gb_12_months": 500
+  },
+  "team": {
+    "size": 2,
+    "experience": "intermediate",
+    "languages": ["python", "typescript"],
+    "has_devops": false
+  },
+  "budget": {
+    "monthly_infra_usd": 0
+  },
+  "timeline": {
+    "mvp_weeks": 8
+  },
+  "infrastructure": {
+    "cloud_preference": "any",
+    "deployment_model": "managed_cloud",
+    "data_residency": "none",
+    "existing_systems": []
+  },
+  "requirements": {
+    "realtime": true,
+    "offline_support": false,
+    "full_text_search": true,
+    "file_media_storage": true,
+    "payments": false,
+    "multi_tenant": false,
+    "seo_critical": false,
+    "auth": "email_password",
+    "ml_features": "none",
+    "availability": "99.9"
+  },
+  "priorities": {
+    "cost": 5,
+    "performance": 4,
+    "time_to_market": 3,
+    "developer_experience": 3,
+    "ease_of_maintenance": 4
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "E10",
+  "project": {
+    "name": "Field Technician Mobile Assistant",
+    "description": "Mobile application for HVAC field technicians built by a team whose sole programming competency is Python.",
+    "type": "web_app",
+    "platforms": ["android", "ios"]
+  },
+  "scale": {
+    "users_at_launch": 500,
+    "users_12_months": 8000,
+    "traffic_pattern": "steady",
+    "workload": "balanced",
+    "data_volume_gb_12_months": 25
+  },
+  "team": {
+    "size": 3,
+    "experience": "intermediate",
+    "languages": ["python"],
+    "has_devops": false
+  },
+  "budget": {
+    "monthly_infra_usd": 150
+  },
+  "timeline": {
+    "mvp_weeks": 12
+  },
+  "infrastructure": {
+    "cloud_preference": "any",
+    "deployment_model": "managed_cloud",
+    "data_residency": "none",
+    "existing_systems": []
+  },
+  "requirements": {
+    "realtime": false,
+    "offline_support": false,
+    "full_text_search": false,
+    "file_media_storage": true,
+    "payments": false,
+    "multi_tenant": false,
+    "seo_critical": false,
+    "auth": "email_password",
+    "ml_features": "none",
+    "availability": "99.9"
+  },
+  "priorities": {
+    "cost": 3,
+    "performance": 3,
+    "time_to_market": 4,
+    "developer_experience": 4,
+    "ease_of_maintenance": 4
+  }
+}

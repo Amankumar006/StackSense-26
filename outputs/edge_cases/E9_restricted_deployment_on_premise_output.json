@@ -1,0 +1,173 @@
+{
+  "scenario_id": "E9",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Modular monolith architecture combining React (Vite) frontend and FastAPI backend with PostgreSQL hosted on On-Premise Server (Docker Compose / Podman). Estimated monthly infrastructure cost ranges from $15 to $60.",
+  "architecture_style": "modular_monolith",
+  "stack": {
+    "frontend": {
+      "choice": "React (Vite)",
+      "justification": "Lightweight client-rendered SPA provides rapid interactive state management with minimal framework overhead.",
+      "driven_by": [
+        "project.platforms",
+        "priorities.performance"
+      ],
+      "alternatives": [
+        {
+          "choice": "Next.js",
+          "why_not": "Server-side rendering runtime unnecessary for authenticated, non-SEO internal/SaaS app."
+        }
+      ],
+      "tradeoffs": [
+        "Initial bundle download before client hydration."
+      ]
+    },
+    "backend": {
+      "choice": "FastAPI",
+      "justification": "Asynchronous Python framework with automatic OpenAPI documentation and Pydantic validation; enables rapid MVP development.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "team.languages",
+        "timeline.mvp_weeks"
+      ],
+      "alternatives": [
+        {
+          "choice": "Django",
+          "why_not": "FastAPI is more lightweight, provides native async performance, and integrates better with mobile APIs."
+        }
+      ],
+      "tradeoffs": [
+        "Requires explicit worker process management (Uvicorn / Gunicorn) for multi-core scaling."
+      ]
+    },
+    "database": {
+      "choice": "PostgreSQL",
+      "justification": "Self-hosted PostgreSQL container with local persistent volumes, preserving zero-cloud dependency for on-premise deployment.",
+      "driven_by": [
+        "project.type",
+        "scale.data_volume_gb_12_months",
+        "scale.workload",
+        "priorities.cost",
+        "infrastructure.deployment_model"
+      ],
+      "alternatives": [
+        {
+          "choice": "Amazon Aurora / Cloud SQL",
+          "why_not": "Public cloud managed databases violate strict on_premise boundaries."
+        }
+      ],
+      "tradeoffs": [
+        "Requires connection pooling (e.g. PgBouncer) under high concurrent connection spikes."
+      ]
+    },
+    "hosting": {
+      "choice": "On-Premise Server (Docker Compose / Podman)",
+      "justification": "Strict on-premise corporate datacenter constraint strictly eliminates external public cloud PaaS/SaaS dependencies; containers orchestrated locally on bare-metal or hypervisor VMs.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "infrastructure.deployment_model"
+      ],
+      "alternatives": [
+        {
+          "choice": "Public Cloud (AWS / GCP / Azure)",
+          "why_not": "Public cloud services violate the mandatory on_premise isolation boundary."
+        },
+        {
+          "choice": "Kubernetes (k8s)",
+          "why_not": "Kubernetes introduces immense operational complexity and dedicated DevOps staffing burden compared to Docker Compose / Podman for on-prem operations."
+        }
+      ],
+      "tradeoffs": [
+        "Requires physical hardware procurement, manual OS patching, and internal disaster recovery planning."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "realtime",
+        "choice": "Socket.io with Redis Adapter",
+        "justification": "Bi-directional WebSocket communication enabling real-time chat, notifications, and collaborative state syncing.",
+        "driven_by": [
+          "requirements.realtime"
+        ],
+        "alternatives": [
+          {
+            "choice": "Pusher",
+            "why_not": "Proprietary commercial SaaS with steep pricing jumps under high concurrency."
+          }
+        ],
+        "tradeoffs": [
+          "Requires stateful connection management on backend workers."
+        ]
+      },
+      {
+        "layer": "storage",
+        "choice": "MinIO (Self-Hosted S3-Compatible Storage)",
+        "justification": "High-performance S3-compatible object storage deployed inside on-premise infrastructure without external internet connectivity.",
+        "driven_by": [
+          "requirements.file_media_storage",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Amazon S3 / Azure Blob",
+            "why_not": "Public cloud storage violates strict on_premise isolation boundary."
+          }
+        ],
+        "tradeoffs": [
+          "Requires local disk storage capacity alerting."
+        ]
+      },
+      {
+        "layer": "auth",
+        "choice": "Keycloak (Self-Hosted Identity)",
+        "justification": "Authentication service resolving email_password requirements with secure token issuance.",
+        "driven_by": [
+          "requirements.auth",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Firebase Auth / Auth0",
+            "why_not": "Cloud SaaS identity providers require public internet access, violating on-premise / air-gapped isolation."
+          }
+        ],
+        "tradeoffs": [
+          "Self-managed Keycloak database realm backups required."
+        ]
+      },
+      {
+        "layer": "queue",
+        "choice": "RabbitMQ (Self-Hosted)",
+        "justification": "Open-source AMQP message broker deployed on-premise for reliable asynchronous decoupling without cloud connectivity.",
+        "driven_by": [
+          "compliance",
+          "scale.users_12_months",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Amazon SQS",
+            "why_not": "Amazon SQS is a public cloud service unavailable in air-gapped or on-prem environments."
+          }
+        ],
+        "tradeoffs": [
+          "Requires persistent disk volume monitoring and clustering setup."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 15.0,
+    "max": 60.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [],
+  "assumptions": [
+    "requirements.p95_latency_ms defaulted to null"
+  ],
+  "validation_errors": []
+}

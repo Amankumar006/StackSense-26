@@ -1,0 +1,137 @@
+{
+  "scenario_id": "E6",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Static architecture combining Astro frontend and serverless/static backend with no database hosted on Netlify / Edge CDN. Estimated monthly infrastructure cost ranges from $0 to $35.",
+  "architecture_style": "static",
+  "stack": {
+    "frontend": {
+      "choice": "Astro",
+      "justification": "Content-first static site generation with islands architecture minimizes client-side JavaScript, maximizing SEO and read-heavy performance.",
+      "driven_by": [
+        "project.platforms",
+        "requirements.seo_critical",
+        "scale.workload"
+      ],
+      "alternatives": [
+        {
+          "choice": "Next.js (static export)",
+          "why_not": "Heavier client runtime than needed for purely markdown-driven content."
+        }
+      ],
+      "tradeoffs": [
+        "Complex stateful interactivity requires islands hydration."
+      ]
+    },
+    "backend": {
+      "choice": "None",
+      "justification": "Read-heavy content and markdown pages are fully pre-rendered at build time; dynamic backend server is unnecessary.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "scale.workload"
+      ],
+      "alternatives": [
+        {
+          "choice": "Node.js (Express)",
+          "why_not": "Running a persistent server adds unnecessary operational overhead and cost for static content."
+        },
+        {
+          "choice": "Microservices Architecture",
+          "why_not": "Massive over-engineering trap: decomposing a read-heavy content site into microservices introduces distributed latency and operational burden without any functional benefit."
+        }
+      ],
+      "tradeoffs": [
+        "Forms and interactive inputs require external serverless handler or webhook."
+      ]
+    },
+    "database": {
+      "choice": "None",
+      "justification": "Content site relies on static Markdown files; persistent database server is not required.",
+      "driven_by": [
+        "project.type"
+      ],
+      "alternatives": [
+        {
+          "choice": "PostgreSQL",
+          "why_not": "Adds unneeded infrastructure cost ($15+/mo) and maintenance for static read-only articles."
+        }
+      ],
+      "tradeoffs": [
+        "Dynamic user-generated comments or profiles require external service."
+      ]
+    },
+    "hosting": {
+      "choice": "Netlify / Edge CDN",
+      "justification": "Global edge CDN hosting with automated Git deployments and edge caching, serving pre-rendered static assets with zero compute overhead.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "scale.traffic_pattern",
+        "project.type"
+      ],
+      "alternatives": [
+        {
+          "choice": "Kubernetes Cluster (EKS / GKE)",
+          "why_not": "Massive over-engineering trap: running container orchestration for pre-rendered content incurs extreme cost ($70+/mo minimum) and unnecessary operational complexity."
+        },
+        {
+          "choice": "AWS ECS Fargate",
+          "why_not": "Running dedicated container compute for static read-only files is redundant when assets can be served directly from global edge caches."
+        }
+      ],
+      "tradeoffs": [
+        "Monthly build minutes and bandwidth caps on free/entry tiers; dynamic backend logic requires external serverless handlers."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "forms",
+        "choice": "Netlify Forms",
+        "justification": "Serverless form handling embedded in static HTML without deploying an application server.",
+        "driven_by": [
+          "project.type",
+          "backend.choice"
+        ],
+        "alternatives": [
+          {
+            "choice": "Formspree",
+            "why_not": "Netlify Forms is natively bundled with the hosting provider."
+          }
+        ],
+        "tradeoffs": [
+          "100 submissions per month limit on free tier."
+        ]
+      },
+      {
+        "layer": "search",
+        "choice": "Meilisearch",
+        "justification": "Fast, typo-tolerant search engine providing sub-50ms query responses with minimal operational setup.",
+        "driven_by": [
+          "requirements.full_text_search"
+        ],
+        "alternatives": [
+          {
+            "choice": "Elasticsearch",
+            "why_not": "Elasticsearch has heavy JVM RAM overhead (2GB+), excessive for small-to-medium datasets."
+          }
+        ],
+        "tradeoffs": [
+          "Index must fit into host server memory."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 0.0,
+    "max": 35.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [],
+  "assumptions": [
+    "requirements.p95_latency_ms defaulted to null"
+  ],
+  "validation_errors": []
+}

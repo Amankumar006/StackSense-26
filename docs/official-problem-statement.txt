@@ -1,0 +1,921 @@
+SYNERGY '26 · ONLINE SYSTEMS-DESIGN CHALLENGE
+StackSense ChallengeProblem Statement: Intelligent Tech Stack Recommendation Engine
+Format Individual, fully online
+Problem release10 November 2026, 10:00 IST
+Submission
+deadline
+15 November 2026, 23:59 IST
+Submit on Unstop (Google Drive folder link)
+Document
+version
+1.0
+
+Contents
+The Challenge
+What You Must Build
+Input Specification
+Output Specification
+Engine Design Rules
+Edge Cases Your Engine Must Handle
+Public Sample Scenarios
+Evaluation
+Submission Guidelines
+Project Report Template
+Rules and Regulations
+Frequently Asked Questions
+Appendix A: Public Scenario JSON Files
+1. The Challenge
+Every new software project starts with the same question: what should we build it with? The answer
+depends on far more than popularity. A three-person student team with no budget, a fintech bound by RBI
+data-localisation rules, and a game studio chasing 60 ms latency should not end up with the same stack.
+Your task is to build a tech stack recommendation engine. It takes structured project parameters, such
+as scale, team size and skills, budget, infrastructure and compliance constraints, and returns a
+recommended combination of frontend, backend, database and hosting, plus supporting services where
+relevant. Every choice must come with architectural reasoning that a senior engineer would accept.
+The engine is judged on whether its recommendations are right for the constraints, whether it asks
+for the right inputs, and whether it can explain itself. A beautiful UI that recommends the same
+stack for every project will score poorly.
+2. What You Must Build
+2.1 Functional requirements
+ID Requirement Description
+FR1 Input collection Collect all mandatory parameters in Section 3 through your own UI (web or CLI).
+You may collect additional parameters and must justify them in your report.
+FR2 Scenario import Load a scenario from a JSON file in the standard input schema (Section 3.2).
+Judges will use this to run hidden scenarios.
+FR3 Core
+recommendation
+Recommend one choice for each of the four core layers: frontend, backend,
+database, hosting. "None" is a valid choice when justified (for example, no backend
+for a static site).
+FR4 Supporting servicesRecommend supporting components (cache, queue, search, auth, storage, CDN,
+realtime, payments, ML, CI/CD, observability) when the inputs call for them.
+FR5 Explanation For each component, give a justification, the input fields that drove it, at least one
+alternative with the reason it was not chosen, and trade-offs.
+1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+7. 
+8. 
+9. 
+10. 
+11. 
+12. 
+13. 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 2 of 19
+
+ID Requirement Description
+FR6 Cost band Give an estimated monthly cost range in USD with the assumptions behind it.
+FR7 Validation and
+conflicts
+Validate input and report field-level errors. Detect contradictory or infeasible
+constraints and report them as warnings with a severity.
+FR8 Output export Export the result as JSON following the output schema (Section 4).
+FR9 Determinism The same input must always produce the same stack.
+2.2 Non-functional requirements
+Runs locally from your README on Windows, macOS or Linux with commands a judge can copy.
+Docker Compose is welcome. A judge should be able to get it running in under 15 minutes.
+No paid keys required. If an optional feature needs an API key, the engine must still work fully without
+it.
+Responsive: a recommendation should appear within about 10 seconds on a normal laptop.
+Any language and framework may be used to build the engine.
+• 
+• 
+• 
+• 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 3 of 19
+
+3. Input Specification
+Your engine must accept every field below. Fields marked optional must be handled when absent, using a
+default that you record in assumptions. Enum values are lower-case strings exactly as written.
+3.1 Mandatory input schema
+Field Type Required Allowed values / meaning
+project.name string No Free text
+project.type enum Yes content_site, web_app, saas_b2b,
+ecommerce, marketplace, social,
+realtime_collab, fintech, healthtech,
+data_analytics, iot, ai_ml_product,
+internal_tool, gaming, api_platform, other
+project.description string No Free text. May be parsed by your engine
+(see Section 5.1)
+project.platforms list of
+enum
+Yes (non-
+empty)
+web, android, ios, desktop, api_only
+scale.users_at_launch integer ≥ 0Yes Registered/monthly active users at launch
+scale.users_12_months integer ≥ 0Yes Expected users after 12 months
+scale.peak_concurrent_usersinteger ≥ 0No Simultaneous users at peak
+scale.traffic_pattern enum No (default
+steady)
+steady, spiky, seasonal
+scale.workload enum No (default
+balanced)
+read_heavy, balanced, write_heavy
+scale.data_volume_gb_12_monthsnumber ≥
+0
+No Total stored data after 12 months, GB
+team.size integer ≥ 1Yes Number of engineers
+team.experience enum Yes beginner, intermediate, senior, mixed
+team.languages list of
+strings
+Yes (may be
+empty)
+Lower-case names, e.g. python,
+typescript, java, csharp, php, go, kotlin,
+sql
+team.has_devops boolean No (default
+false)
+Someone can operate infrastructure
+budget.monthly_infra_usd number ≥
+0
+Yes Monthly infrastructure + third-party
+service budget in USD
+timeline.mvp_weeks integer ≥ 1Yes Weeks until the first usable release
+infrastructure.cloud_preferenceenum No (default any)any, aws, gcp, azure, none
+infrastructure.deployment_modelenum No (default
+managed_cloud)
+managed_cloud, self_hosted_cloud_vm,
+on_premise, air_gapped
+infrastructure.data_residencyenum No (default
+none)
+none, india, eu, us, other
+StackSense Challenge · Synergy ’26 · Problem Statement Page 4 of 19
+
+Field Type Required Allowed values / meaning
+infrastructure.existing_systemslist of
+strings
+No Systems the stack must integrate with or
+reuse
+requirements.realtime boolean No (default
+false)
+Live updates, chat, collaboration,
+presence
+requirements.offline_supportboolean No (default
+false)
+Must work without connectivity
+requirements.full_text_searchboolean No (default
+false)
+Search over text content
+requirements.file_media_storageboolean No (default
+false)
+User uploads: images, video, documents
+requirements.payments boolean No (default
+false)
+Takes money from users
+requirements.auth enum No (default
+none)
+none, email_password, social, phone_otp,
+enterprise_sso
+requirements.multi_tenantboolean No (default
+false)
+Several customer organisations share the
+system
+requirements.ml_features enum No (default
+none)
+none, inference_api, llm_rag, training
+requirements.seo_criticalboolean No (default
+false)
+Public pages must rank in search engines
+requirements.availabilityenum
+(string)
+No (default
+"99.9")
+"99", "99.9", "99.95", "99.99"
+requirements.p95_latency_msinteger > 0
+or null
+No Target 95th-percentile response time
+compliance list of
+enum
+No (default [])gdpr, dpdp, hipaa, pci_dss,
+rbi_localisation, soc2, iso27001
+priorities.<key> integer 1-5No (default 3) Keys: cost, time_to_market, scalability,
+performance, maintainability, security
+You are encouraged to collect more than this, for example expected request rate, geographic spread
+of users, existing licences, team hiring plans, or vendor lock-in tolerance. Extra parameters count
+towards Input Design & Research when you show how they change the recommendation. Your
+engine must still work on files that contain only the standard fields.
+3.2 Standard scenario file (example: public scenario P2)
+{
+  "scenario_id": "P2",
+  "project": {
+    "name": "FixIt Now",
+    "type": "marketplace",
+    "description": "Customers book electricians and plumbers in two cities. Providers accept jobs, chat 
+with customers and get paid. Android app for providers, web + Android for customers.",
+    "platforms": [
+      "web",
+StackSense Challenge · Synergy ’26 · Problem Statement Page 5 of 19
+
+      "android"
+    ]
+  },
+  "scale": {
+    "traffic_pattern": "steady",
+    "workload": "balanced",
+    "users_at_launch": 2000,
+    "users_12_months": 30000,
+    "peak_concurrent_users": 800,
+    "data_volume_gb_12_months": 50
+  },
+  "team": {
+    "has_devops": false,
+    "size": 3,
+    "experience": "intermediate",
+    "languages": [
+      "javascript",
+      "typescript",
+      "python"
+    ]
+  },
+  "budget": {
+    "monthly_infra_usd": 150
+  },
+  "timeline": {
+    "mvp_weeks": 8
+  },
+  "infrastructure": {
+    "cloud_preference": "any",
+    "deployment_model": "managed_cloud",
+    "data_residency": "india",
+    "existing_systems": []
+  },
+  "requirements": {
+    "realtime": true,
+    "offline_support": false,
+    "full_text_search": true,
+    "file_media_storage": true,
+    "payments": true,
+    "auth": "phone_otp",
+    "multi_tenant": false,
+    "ml_features": "none",
+    "seo_critical": true,
+    "availability": "99.9",
+    "p95_latency_ms": 500
+  },
+  "compliance": [
+    "dpdp"
+  ],
+  "priorities": {
+    "cost": 4,
+    "time_to_market": 5,
+    "scalability": 3,
+    "performance": 3,
+    "maintainability": 3,
+    "security": 3
+  }
+}
+StackSense Challenge · Synergy ’26 · Problem Statement Page 6 of 19
+
+4. Output Specification
+Your engine must be able to export each result as a JSON file with the structure below. Your UI can
+present it in any way. Additional fields are allowed.
+Field Required Meaning
+status Yes "ok", "ok_with_warnings", "infeasible" or "invalid_input"
+summary Yes One or two sentences describing the recommended
+approach
+architecture_style Yes static, monolith, modular_monolith, serverless,
+service_oriented, microservices, hybrid, other
+stack.frontend / backend /
+database / hosting
+Yes Component object (below). Use "None" as choice when
+a layer is genuinely not needed, and justify it
+stack.supporting[] No Extra layers with a "layer" name: cache, queue, search,
+auth, storage, cdn, realtime, payments, ml, ci_cd,
+observability, other
+component.choice Yes A real, currently maintained product or framework
+component.justification Yes Why this fits the given inputs
+component.driven_by Yes Input field paths that influenced this choice, e.g.
+["team.languages"]
+component.alternatives[]Yes, ≥1 for the
+four core layers
+{choice, why_not}
+component.tradeoffs[] No Known downsides of the choice
+estimated_monthly_cost_usdYes {min, max, assumptions[]}: an order-of-magnitude band,
+not a quote
+warnings[] Yes (may be
+empty)
+{code, severity: info | warning | critical, message,
+fields[]}
+assumptions[] Yes (may be
+empty)
+Every default or interpretation your engine applied
+validation_errors[] Yes (may be
+empty)
+{field, message} for each invalid or missing field
+4.1 Example output (format illustration only)
+Toy project: a college fest information site. Some fields are shortened with "...". This is not a reference answer for any
+scenario.
+{
+  "scenario_id": "EX1",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Static-first site with a small serverless form handler; free tier is enough.",
+  "architecture_style": "static",
+  "stack": {
+    "frontend": {
+      "choice": "Astro",
+      "justification": "seo_critical=true and a read-heavy content site favour pre-rendered pages; team knows 
+JavaScript.",
+      "driven_by": [
+        "requirements.seo_critical",
+StackSense Challenge · Synergy ’26 · Problem Statement Page 7 of 19
+
+        "scale.workload",
+        "team.languages"
+      ],
+      "alternatives": [
+        {
+          "choice": "Next.js (static export)",
+          "why_not": "Heavier runtime than needed for mostly static pages."
+        }
+      ],
+      "tradeoffs": [
+        "Interactive widgets need islands/hydration."
+      ]
+    },
+    "backend": {
+      "choice": "Netlify Functions",
+      "justification": "...",
+      "driven_by": [
+        "..."
+      ],
+      "alternatives": [],
+      "tradeoffs": []
+    },
+    "database": {
+      "choice": "None",
+      "justification": "...",
+      "driven_by": [
+        "..."
+      ],
+      "alternatives": [],
+      "tradeoffs": []
+    },
+    "hosting": {
+      "choice": "Netlify (free)",
+      "justification": "...",
+      "driven_by": [
+        "..."
+      ],
+      "alternatives": [],
+      "tradeoffs": []
+    },
+    "supporting": [
+      {
+        "layer": "forms",
+        "choice": "Netlify Forms",
+        "justification": "...",
+        "driven_by": [
+          "..."
+        ],
+        "alternatives": [],
+        "tradeoffs": []
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 0,
+    "max": 5,
+    "assumptions": [
+      "Under free-tier bandwidth limits"
+    ]
+  },
+  "warnings": [
+    {
+      "code": "FREE_TIER_LIMITS",
+      "severity": "info",
+      "message": "Free tier limits may be exceeded during the fest week.",
+      "fields": [
+        "scale.traffic_pattern"
+      ]
+    }
+  ],
+  "assumptions": [
+    "No user accounts are needed"
+  ],
+  "validation_errors": []
+}
+When input is invalid, return "status": "invalid_input" with every problem listed in validation_errors
+and stack set to null. When constraints cannot all be satisfied, return "status": "infeasible" with
+critical warnings, or "ok_with_warnings" with a reduced-scope stack whose assumptions state exactly
+which constraints were relaxed.
+StackSense Challenge · Synergy ’26 · Problem Statement Page 8 of 19
+
+5. Engine Design Rules
+5.1 Use of LLMs and AI services
+The decision must be yours. The selection of stack components must be made by logic you design:
+rules, weighted scoring, decision trees, constraint solving, knowledge graphs, or ML models that you
+train or fit yourself on cited data.
+LLMs (hosted or local) are permitted only for:
+Input parsing: turning the free-text project.description into suggested structured fields, which the
+user can confirm or edit.
+Wording: rephrasing explanations your engine has already produced, without changing the chosen
+components.
+LLM-off test: your engine must provide a switch (flag, environment variable or UI toggle) that disables all
+LLM calls. With it switched off, the engine must produce the same stack for every scenario. Judges will
+run this test. If the stack is chosen by an LLM prompt, the submission receives zero for Recommendation
+Quality.
+AI coding assistants may be used to write code. Declare them in the report.
+5.2 Knowledge base
+Build and curate your own representation of technologies: their strengths, limits, cost profile,
+operational burden, ecosystem, compliance support and maturity.
+Recommend only real, currently maintained products. Recommending deprecated or shut-down
+services is penalised.
+Cite the sources behind your knowledge base: official docs, pricing pages, surveys, benchmarks,
+case studies.
+5.3 Hard and soft constraints
+Treat data_residency, compliance, deployment_model and an explicit cloud_preference as hard
+constraints: a recommendation that breaks them must not be produced, or must be flagged as a critical
+warning. Budget, timeline and priorities are soft constraints that your engine trades off and explains.
+6. Edge Cases Your Engine Must Handle
+Category Examples Expected engine behaviour
+Missing fields Required fields absent, or the file has only a
+few fields
+Report missing fields, or apply documented
+defaults listed in assumptions
+Invalid values Wrong types, negatives, unknown enum
+values, out-of-range priorities
+Field-level validation errors; never crash
+Contradictions Huge scale with zero budget, enterprise
+availability with a beginner solo developer,
+short timeline with many platforms
+Critical warnings; infeasible status or clearly
+labelled relaxed recommendation
+Over-engineering
+traps
+High traffic that is actually static, small internal
+tools, tiny teams
+Simple stacks; no microservices or
+Kubernetes without justification
+1. 
+2. 
+• 
+• 
+• 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 9 of 19
+
+Category Examples Expected engine behaviour
+Regulatory
+constraints
+Data residency, HIPAA, PCI DSS, RBI
+localisation, GDPR, DPDP
+Only compliant regions and vendors; explicit
+compliance notes
+Existing systemsLegacy code, existing databases, identity
+providers
+Reuse or integrate, and say how
+Restricted
+deployment
+On-premise or air-gapped Only self-hostable components; no SaaS or
+CDN dependencies
+Skill mismatch Team languages that do not match the popular
+choice
+Weigh team skills explicitly and explain the
+trade-off
+Deprecated
+technology
+Services that have been retired or reached
+end-of-life
+Never recommend them; warn about end-
+of-life items found in existing_systems
+Document how you handle each category in your report's edge-case section, with screenshots.
+StackSense Challenge · Synergy ’26 · Problem Statement Page 10 of 19
+
+7 . Public Sample Scenarios
+Six public scenarios are provided as JSON files (full text in Appendix A; also shared as 
+stacksense_public_scenarios.json). Run all six, include your outputs in the submission (Section 9) and
+discuss them in your report. Judges will also run hidden scenarios of similar style and difficulty, including
+edge cases.
+ID Scenario Key numbers Constraints
+P1 Personal portfolio and blog
+Personal portfolio with project pages and a weekly blog.
+Content written in Markdown by the owner.
+3,000 users / 12 mo
+Team 1 (beginner)
+USD 0/mo
+none
+P2 Home-services marketplace (India)
+Customers book electricians and plumbers in two cities.
+Providers accept jobs, chat with customers and get paid.
+Android app for providers, web + Android for customers.
+30,000 users / 12 mo
+Team 3 (intermediate)
+USD 150/mo
+dpdp
+Residency: india
+P3 Real-time collaborative whiteboard SaaS
+Multiplayer whiteboard: many users edit the same board at
+once with live cursors. Teams pay per seat.
+50,000 users / 12 mo
+Team 5 (senior)
+USD 1,500/mo
+gdpr
+P4 Digital lending and payments app (India)
+Small personal loans with UPI disbursal and EMI collection.
+KYC document upload, credit scoring model, double-entry
+ledger.
+300,000 users / 12 mo
+Team 8 (senior)
+USD 6,000/mo
+rbi_localisation,
+pci_dss, dpdp,
+iso27001
+Residency: india
+P5 Internal HR leave and asset tracker
+Leave requests, approvals and laptop/asset assignment for
+a 1,200-employee company. Used only by employees.
+1,500 users / 12 mo
+Team 2 (intermediate)
+USD 300/mo
+iso27001
+Residency: india
+P6 Offline-first crop survey app for field agents
+NGO field agents fill crop surveys with GPS-tagged photos
+in villages with intermittent 2G/3G. Devices are low-end
+Android phones (2 GB RAM). Data syncs when signal is
+available.
+2,000 users / 12 mo
+Team 2 (mixed)
+USD 100/mo
+dpdp
+Residency: india
+StackSense Challenge · Synergy ’26 · Problem Statement Page 11 of 19
+
+8. Evaluation
+Criterion Weight What judges look for
+Recommendation
+Quality
+35% Judges run your engine on the 6 public scenarios and on additional
+hidden scenarios in the same JSON format, including edge cases.
+Each output is compared against a set of acceptable stacks and known
+bad choices prepared by the judges. There is rarely one right answer, but
+there are clearly wrong ones.
+Hard constraints (data residency, compliance, cloud preference,
+deployment model, budget) must never be violated silently.
+Consistency: identical input must give an identical stack; small input
+changes must cause sensible, local output changes.
+Input Design &
+Research
+30% How well your input collection captures what actually drives architecture
+decisions: the mandatory schema plus any extra parameters you add and
+defend.
+Validation: types, ranges, unknown values, missing fields, contradictory
+combinations.
+Research depth of your knowledge base: how technologies are
+characterised and why, with cited sources.
+Reasoning &
+Explainability
+20% Every component has a justification tied to specific inputs (driven_by), at
+least one alternative with a reason it lost, and honest trade-offs.
+Conflicts and risks are surfaced as warnings in plain language.
+Explanations are specific to the scenario, not generic marketing text.
+Documentation
+Quality
+15% README lets a judge set up and run the engine without guessing.
+Report follows the template, is clear, and has real screenshots.
+If a judge cannot run your engine after following the README, it is evaluated from your report screenshots
+and the output JSON files in your folder, with a penalty under Recommendation Quality and
+Documentation.
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 12 of 19
+
+9. Submission Guidelines
+9.1 Key dates
+Problem statement released10 November 2026, 10:00 IST
+Submission window 10 November 2026, 10:00 IST to 15 November 2026, 23:59 IST (on Unstop)
+Late submissions are not accepted.
+9.2 How to submit
+Create one Google Drive folder named StackSense26_<FullName>, for example 
+StackSense26_Priya_Sharma.
+Place the required contents (9.3) inside it.
+Set sharing to "Anyone with the link: Viewer". Open the link in a private browser window to check it
+works. Inaccessible folders are not evaluated.
+Submit the folder link on Unstop before the deadline.
+Do not change anything in the folder after the deadline. Modification timestamps are checked; any
+change after 15 November 2026, 23:59 IST leads to disqualification.
+9.3 Required folder structure
+StackSense26_<FullName>/
+├── source/                     Complete source code (or a single source.zip)
+│   ├── README.md               Mandatory, at the root of the source
+│   ├── .env.example            If the engine uses any environment variables
+│   └── ...
+├── outputs/                    Your engine's JSON output for each public scenario
+│   ├── P1_output.json
+│   ├── ...
+│   └── P6_output.json
+└── Report_<FullName>.pdf
+Do not upload node_modules, virtual environments, build output, large binaries or any secrets/API keys.
+Keep the whole folder under 1 GB.
+A public GitHub repository link in the README is strongly recommended. Its commit history is used as
+supporting evidence of originality; commits dated before 10 November 2026, 10:00 IST will be
+scrutinised.
+9.4 README.md must contain
+Project name and a one-paragraph overview.
+System architecture: a diagram (image or ASCII) and a short description of each module and the data
+flow.
+Technology used to build the engine, with versions.
+Prerequisites (runtime versions, OS notes).
+Step-by-step local setup and run commands.
+How to run a scenario JSON file and where the output JSON is written.
+How to switch off all LLM features (if any are used).
+Project structure overview.
+Credits: every third-party library, dataset and API used.
+1. 
+2. 
+3. 
+4. 
+5. 
+• 
+• 
+• 
+1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+7. 
+8. 
+9. 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 13 of 19
+
+10. Project Report Template
+Submit the report as a PDF. Follow this structure and numbering. Sections 1-10 must fit within 15 pages
+(A4, 10-12 pt body text). Appendices are optional and limited to 10 further pages.
+Section What to include Suggested
+length
+Title page Challenge name, your full name, college, Unstop registered email,
+GitHub link (if any), date.
+-
+1. Abstract What your engine does and what makes it good, in at most 150
+words.
+¼ page
+2. Problem
+understanding
+How you interpreted the problem, scope decisions and
+assumptions.
+½ page
+3. System architectureArchitecture diagram, modules, data flow from input to output,
+technology used to build the engine.
+1-2 pages
+4. Input design and
+research
+Every input you collect (mandatory and extra): why it matters
+architecturally, which decisions it affects, validation rules, and the
+research behind it.
+2-3 pages
+5. Knowledge base and
+decision logic
+How technologies are represented, how candidates are scored or
+filtered, how hard and soft constraints are applied, how ties and
+conflicts are resolved, how determinism is guaranteed. LLM usage
+declaration and the LLM-off switch.
+2-3 pages
+6. Sample
+recommendations
+Screenshots for all 6 public scenarios. Walk through at least 2 in
+depth, explaining why each component was chosen.
+3-4 pages
+7 . Edge-case handlingA table covering each category in Section 6 of this document: how it
+is detected, what the engine does, a screenshot.
+1-2 pages
+8. Validation How you checked that recommendations are sensible, for example
+comparison with real company case studies or expert review.
+½-1 page
+9. Limitations and future
+work
+What your engine gets wrong or cannot handle, and how you would
+improve it.
+½ page
+10. References and third-
+party tools
+Every library, dataset, API and source used, with links. Mandatory.as needed
+11. AI assistance
+declaration
+Which AI tools you used while building, and for what. ¼ page
+Screenshots must come from your actual running engine. Edited or mocked screenshots lead to
+disqualification.
+11. Rules and Regulations
+Participation: strictly individual. No team submissions or multi-member collaboration.
+Third-party tools: publicly available APIs, datasets and open-source libraries are permitted, provided
+they are explicitly cited in the project report.
+• 
+• 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 14 of 19
+
+Originality: submissions must be original and built during the challenge window. Plagiarised or pre-
+existing projects result in immediate disqualification. Submissions are checked for code and report
+similarity.
+LLM policy: as in Section 5.1.
+Integrity: mocked screenshots, hard-coded outputs for the public scenarios, or post-deadline edits
+lead to disqualification. Judges may test with modified versions of the public scenarios to detect hard-
+coding.
+Decisions: all decisions made by the organising and judging panels are final.
+12. Frequently Asked Questions
+Can my engine call ChatGPT, Claude, Gemini or another LLM?
+Only for the two permitted uses in Section 5.1: turning a free-text description into structured inputs, and
+polishing the wording of explanations. The stack selection itself must be made by your own logic. Your
+engine must run with all LLM features switched off and still produce the same stack. If the stack is chosen
+by an LLM, the submission receives zero for Recommendation Quality.
+Can I use AI coding assistants (Copilot, Cursor, Claude Code, etc.) to write my code?
+Yes. Declare which ones you used in the report's AI assistance section. The design decisions, knowledge
+base and reasoning must be your own.
+Is there one correct stack for each scenario?
+No. Judges have a set of acceptable answers per scenario and a list of choices that are clearly wrong for
+that scenario. A well-justified, defensible choice scores well even if it differs from the judges' first
+preference.
+Must I use the exact JSON field names?
+Your engine must accept scenario files in the standard schema exactly as specified, because judges will
+feed hidden scenarios in that format. Your UI can look however you like, and you may add extra input
+fields as long as the engine works when they are absent.
+Which technologies must my engine know about?
+None are mandated. Coverage and accuracy of your knowledge base are judged. As a guide, a credible
+engine usually knows at least 6-8 realistic options for each core layer, plus common supporting services.
+Do I need to deploy my engine online?
+No. It must run locally using the steps in your README. A hosted demo link is welcome but optional, and it
+does not replace the local setup.
+Web UI or command line?
+Either is acceptable, as long as the engine can load a scenario JSON file and export the output JSON. A
+UI usually makes evaluation easier.
+Can I use public datasets such as the Stack Overflow Developer Survey, GitHub statistics or cloud
+pricing pages?
+Yes. Cite every dataset, API and library in the report. Uncited third-party material may be treated as
+plagiarism.
+• 
+• 
+• 
+• 
+StackSense Challenge · Synergy ’26 · Problem Statement Page 15 of 19
+
+How accurate must the cost estimate be?
+It is an order-of-magnitude band with stated assumptions. Judges check that it is in the right range for the
+scenario, not that it matches a provider's price list to the dollar.
+Why is the budget in USD?
+Most cloud and SaaS price lists are published in USD. You may additionally display INR in your UI.
+What should my engine do when the constraints cannot all be met?
+Say so. Returning status "infeasible" with clear critical warnings, or a clearly labelled reduced-scope
+recommendation that names the constraints it relaxed, are both valid. A confident answer that ignores the
+conflict is not.
+Can I use boilerplates or starter templates?
+Yes, for scaffolding (for example create-next-app or a Django starter). The recommendation engine itself
+must be written during the challenge window.
+Can I reuse a project I built earlier?
+No. Pre-existing projects lead to disqualification. Open-source libraries are fine when cited.
+Can I edit my submission after the deadline?
+No. Judges check modification timestamps in the Drive folder. Any file added or changed after 15
+November 2026, 23:59 IST leads to disqualification.
+Can I submit more than once?
+Submit your Drive link on Unstop. If Unstop allows you to update it before the deadline, the last link
+submitted before the deadline is evaluated.
+Is there a size limit for the Drive folder?
+Keep the folder under 1 GB in total. Do not upload node_modules, virtual environments, build output or
+secrets.
+Can I work with a friend?
+No. The challenge is strictly individual. Similar submissions will be checked for code and report overlap.
+StackSense Challenge · Synergy ’26 · Problem Statement Page 16 of 19
+
+Appendix A: Public Scenario JSON Files
+Shown in compact form. The same content is shared as stacksense_public_scenarios.json; each object can be saved as
+its own file.
+P1: Personal portfolio and blog
+{
+  "scenario_id": "P1",
+  "project": {"name": "DevFolio", "type": "content_site", "description": "Personal portfolio with project 
+pages and a weekly blog. Content written in Markdown by the owner.", "platforms": ["web"]},
+  "scale": {"traffic_pattern": "steady", "workload": "read_heavy", "users_at_launch": 200, 
+"users_12_months": 3000, "peak_concurrent_users": 50, "data_volume_gb_12_months": 1},
+  "team": {"has_devops": false, "size": 1, "experience": "beginner", "languages": ["javascript", "html", 
+"css"]},
+  "budget": {"monthly_infra_usd": 0},
+  "timeline": {"mvp_weeks": 2},
+  "infrastructure": {"cloud_preference": "any", "deployment_model": "managed_cloud", "data_residency": 
+"none", "existing_systems": []},
+  "requirements": {"realtime": false, "offline_support": false, "full_text_search": false, 
+"file_media_storage": false, "payments": false, "auth": "none", "multi_tenant": false, "ml_features": 
+"none", "seo_critical": true, "availability": "99", "p95_latency_ms": null},
+  "compliance": [],
+  "priorities": {"cost": 5, "time_to_market": 4, "scalability": 1, "performance": 3, "maintainability": 
+3, "security": 2}
+}
+P2: Home-services marketplace (India)
+{
+  "scenario_id": "P2",
+  "project": {"name": "FixIt Now", "type": "marketplace", "description": "Customers book electricians and 
+plumbers in two cities. Providers accept jobs, chat with customers and get paid. Android app for 
+providers, web + Android for customers.", "platforms": ["web", "android"]},
+  "scale": {"traffic_pattern": "steady", "workload": "balanced", "users_at_launch": 2000, 
+"users_12_months": 30000, "peak_concurrent_users": 800, "data_volume_gb_12_months": 50},
+  "team": {"has_devops": false, "size": 3, "experience": "intermediate", "languages": ["javascript", 
+"typescript", "python"]},
+  "budget": {"monthly_infra_usd": 150},
+  "timeline": {"mvp_weeks": 8},
+  "infrastructure": {"cloud_preference": "any", "deployment_model": "managed_cloud", "data_residency": 
+"india", "existing_systems": []},
+  "requirements": {"realtime": true, "offline_support": false, "full_text_search": true, 
+"file_media_storage": true, "payments": true, "auth": "phone_otp", "multi_tenant": false, "ml_features": 
+"none", "seo_critical": true, "availability": "99.9", "p95_latency_ms": 500},
+  "compliance": ["dpdp"],
+  "priorities": {"cost": 4, "time_to_market": 5, "scalability": 3, "performance": 3, "maintainability": 
+3, "security": 3}
+}
+P3: Real-time collaborative whiteboard SaaS
+{
+  "scenario_id": "P3",
+  "project": {"name": "BoardRoom", "type": "realtime_collab", "description": "Multiplayer whiteboard: 
+many users edit the same board at once with live cursors. Teams pay per seat.", "platforms": ["web"]},
+  "scale": {"traffic_pattern": "spiky", "workload": "write_heavy", "users_at_launch": 1000, 
+"users_12_months": 50000, "peak_concurrent_users": 5000, "data_volume_gb_12_months": 200},
+  "team": {"has_devops": true, "size": 5, "experience": "senior", "languages": ["typescript", "go"]},
+  "budget": {"monthly_infra_usd": 1500},
+  "timeline": {"mvp_weeks": 12},
+  "infrastructure": {"cloud_preference": "any", "deployment_model": "managed_cloud", "data_residency": 
+"none", "existing_systems": []},
+  "requirements": {"realtime": true, "offline_support": false, "full_text_search": false, 
+"file_media_storage": true, "payments": true, "auth": "social", "multi_tenant": true, "ml_features": 
+"none", "seo_critical": false, "availability": "99.9", "p95_latency_ms": 100},
+  "compliance": ["gdpr"],
+StackSense Challenge · Synergy ’26 · Problem Statement Page 17 of 19
+
+  "priorities": {"cost": 2, "time_to_market": 3, "scalability": 5, "performance": 5, "maintainability": 
+4, "security": 3}
+}
+P4: Digital lending and payments app (India)
+{
+  "scenario_id": "P4",
+  "project": {"name": "QuickCredit", "type": "fintech", "description": "Small personal loans with UPI 
+disbursal and EMI collection. KYC document upload, credit scoring model, double-entry ledger.", 
+"platforms": ["android", "ios", "web"]},
+  "scale": {"traffic_pattern": "spiky", "workload": "balanced", "users_at_launch": 10000, 
+"users_12_months": 300000, "peak_concurrent_users": 10000, "data_volume_gb_12_months": 500},
+  "team": {"has_devops": true, "size": 8, "experience": "senior", "languages": ["java", "kotlin", 
+"typescript"]},
+  "budget": {"monthly_infra_usd": 6000},
+  "timeline": {"mvp_weeks": 16},
+  "infrastructure": {"cloud_preference": "aws", "deployment_model": "managed_cloud", "data_residency": 
+"india", "existing_systems": []},
+  "requirements": {"realtime": false, "offline_support": false, "full_text_search": false, 
+"file_media_storage": true, "payments": true, "auth": "phone_otp", "multi_tenant": false, "ml_features": 
+"inference_api", "seo_critical": false, "availability": "99.95", "p95_latency_ms": 300},
+  "compliance": ["rbi_localisation", "pci_dss", "dpdp", "iso27001"],
+  "priorities": {"cost": 2, "time_to_market": 3, "scalability": 4, "performance": 3, "maintainability": 
+4, "security": 5}
+}
+P5: Internal HR leave and asset tracker
+{
+  "scenario_id": "P5",
+  "project": {"name": "PeopleDesk", "type": "internal_tool", "description": "Leave requests, approvals 
+and laptop/asset assignment for a 1,200-employee company. Used only by employees.", "platforms": 
+["web"]},
+  "scale": {"traffic_pattern": "steady", "workload": "read_heavy", "users_at_launch": 1200, 
+"users_12_months": 1500, "peak_concurrent_users": 300, "data_volume_gb_12_months": 20},
+  "team": {"has_devops": false, "size": 2, "experience": "intermediate", "languages": ["csharp", "sql", 
+"javascript"]},
+  "budget": {"monthly_infra_usd": 300},
+  "timeline": {"mvp_weeks": 6},
+  "infrastructure": {"cloud_preference": "azure", "deployment_model": "managed_cloud", "data_residency": 
+"india", "existing_systems": ["Microsoft Entra ID (Azure AD)", "On-prem SQL Server 2019", "Microsoft 
+365"]},
+  "requirements": {"realtime": false, "offline_support": false, "full_text_search": false, 
+"file_media_storage": true, "payments": false, "auth": "enterprise_sso", "multi_tenant": false, 
+"ml_features": "none", "seo_critical": false, "availability": "99.9", "p95_latency_ms": 800},
+  "compliance": ["iso27001"],
+  "priorities": {"cost": 3, "time_to_market": 5, "scalability": 1, "performance": 2, "maintainability": 
+5, "security": 4}
+}
+P6: Offline-first crop survey app for field agents
+{
+  "scenario_id": "P6",
+  "project": {"name": "KhetSurvey", "type": "other", "description": "NGO field agents fill crop surveys 
+with GPS-tagged photos in villages with intermittent 2G/3G. Devices are low-end Android phones (2 GB 
+RAM). Data syncs when signal is available.", "platforms": ["android"]},
+  "scale": {"traffic_pattern": "spiky", "workload": "write_heavy", "users_at_launch": 300, 
+"users_12_months": 2000, "peak_concurrent_users": 200, "data_volume_gb_12_months": 100},
+  "team": {"has_devops": false, "size": 2, "experience": "mixed", "languages": ["javascript", "python"]},
+  "budget": {"monthly_infra_usd": 100},
+  "timeline": {"mvp_weeks": 10},
+  "infrastructure": {"cloud_preference": "any", "deployment_model": "managed_cloud", "data_residency": 
+"india", "existing_systems": []},
+  "requirements": {"realtime": false, "offline_support": true, "full_text_search": false, 
+"file_media_storage": true, "payments": false, "auth": "phone_otp", "multi_tenant": false, "ml_features": 
+"none", "seo_critical": false, "availability": "99", "p95_latency_ms": null},
+  "compliance": ["dpdp"],
+StackSense Challenge · Synergy ’26 · Problem Statement Page 18 of 19
+
+  "priorities": {"cost": 5, "time_to_market": 4, "scalability": 2, "performance": 3, "maintainability": 
+4, "security": 3}
+}
+StackSense Challenge · Synergy ’26 · Problem Statement Page 19 of 19

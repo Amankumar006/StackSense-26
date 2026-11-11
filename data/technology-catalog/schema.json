@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stacksense.local/schemas/technology-catalog-v0.1.0.json",
+  "title": "StackSense technology catalogue",
+  "description": "Evidence-backed technology metadata. Records catalogue facts, not recommendation scores.",
+  "type": "object",
+  "required": ["catalogue_version", "reviewed_at", "technologies", "compatibility_rules"],
+  "properties": {
+    "catalogue_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "reviewed_at": { "type": "string", "format": "date" },
+    "technologies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/technology" },
+      "uniqueItems": true
+    },
+    "compatibility_rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/compatibilityRule" }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["url", "publisher", "accessed_at", "supports"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "publisher": { "type": "string", "minLength": 1 },
+        "accessed_at": { "type": "string", "format": "date" },
+        "supports": { "type": "string", "minLength": 1 },
+        "terms_or_license": { "type": "string" },
+        "applicability_notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "technology": {
+      "type": "object",
+      "required": ["id", "name", "category", "deployment_models", "capabilities", "operational_profile", "sources", "review_status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "category": {
+          "enum": ["frontend", "backend", "database", "hosting", "cache", "queue", "storage", "auth", "observability", "search", "cdn", "realtime", "payments", "ml", "ci_cd", "forms", "ai_model_access", "ai_orchestration", "other"]
+        },
+        "deployment_models": {
+          "type": "array",
+          "items": { "enum": ["managed_cloud", "self_hosted", "on_prem", "hybrid"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "capabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "limits_or_exclusions": { "type": "array", "items": { "type": "string" } },
+        "regions_or_residency_notes": { "type": "string" },
+        "cost_basis": { "type": "array", "items": { "type": "string" } },
+        "operational_profile": {
+          "type": "object",
+          "required": ["maintenance_level", "skills_required"],
+          "properties": {
+            "maintenance_level": { "enum": ["low", "medium", "high", "context_dependent"] },
+            "skills_required": { "type": "array", "items": { "type": "string" } },
+            "on_call_considerations": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" }, "minItems": 1 },
+        "review_status": { "enum": ["draft", "verified", "needs_review"] },
+        "reviewed_at": { "type": "string", "format": "date" }
+      },
+      "additionalProperties": false
+    },
+    "compatibilityRule": {
+      "type": "object",
+      "required": ["id", "kind", "applies_to", "rationale", "sources", "review_status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "kind": { "enum": ["requires", "prohibits", "preferred_with", "conditional"] },
+        "applies_to": { "type": "array", "items": { "type": "string" }, "minItems": 2, "uniqueItems": true },
+        "condition": { "type": "string" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" }, "minItems": 1 },
+        "review_status": { "enum": ["draft", "verified", "needs_review"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

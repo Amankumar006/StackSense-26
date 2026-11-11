@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "E7",
+  "project": {
+    "name": "AyushPay Micro-Insurance Platform",
+    "description": "Indian health insurance micro-claims platform with UPI payouts, Aadhaar e-KYC, and patient record storage.",
+    "type": "fintech",
+    "platforms": ["web", "android"]
+  },
+  "scale": {
+    "users_at_launch": 10000,
+    "users_12_months": 150000,
+    "traffic_pattern": "spiky",
+    "workload": "write_heavy",
+    "data_volume_gb_12_months": 250
+  },
+  "team": {
+    "size": 6,
+    "experience": "senior",
+    "languages": ["java", "typescript"],
+    "has_devops": true
+  },
+  "budget": {
+    "monthly_infra_usd": 3500
+  },
+  "timeline": {
+    "mvp_weeks": 16
+  },
+  "infrastructure": {
+    "cloud_preference": "aws",
+    "deployment_model": "managed_cloud",
+    "data_residency": "india",
+    "existing_systems": []
+  },
+  "compliance": [
+    "rbi_localisation",
+    "pci_dss",
+    "dpdp"
+  ],
+  "requirements": {
+    "realtime": false,
+    "offline_support": false,
+    "full_text_search": true,
+    "file_media_storage": true,
+    "payments": true,
+    "multi_tenant": false,
+    "seo_critical": false,
+    "auth": "phone_otp",
+    "ml_features": "none",
+    "availability": "99.95",
+    "p95_latency_ms": 150
+  },
+  "priorities": {
+    "cost": 3,
+    "performance": 4,
+    "time_to_market": 3,
+    "developer_experience": 4,
+    "ease_of_maintenance": 5
+  }
+}

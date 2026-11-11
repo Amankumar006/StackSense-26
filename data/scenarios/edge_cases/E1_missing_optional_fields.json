@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "E1",
+  "project": {
+    "name": "Minimalist Engineering Log",
+    "description": "A personal developer journal and project notes with markdown posts.",
+    "type": "content_site",
+    "platforms": ["web"]
+  },
+  "scale": {
+    "users_at_launch": 100,
+    "users_12_months": 2000
+  },
+  "team": {
+    "size": 1,
+    "experience": "beginner",
+    "languages": ["javascript"]
+  },
+  "budget": {
+    "monthly_infra_usd": 0
+  },
+  "timeline": {
+    "mvp_weeks": 2
+  },
+  "infrastructure": {},
+  "requirements": {},
+  "priorities": {}
+}

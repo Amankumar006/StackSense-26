@@ -1,0 +1,186 @@
+{
+  "scenario_id": "P3",
+  "engine_version": "1.0.0",
+  "status": "ok",
+  "summary": "Serverless architecture combining React (Vite) frontend and Go (Gin / Standard Lib) backend with PostgreSQL hosted on Google Cloud Run (asia-south1). Estimated monthly infrastructure cost ranges from $65 to $230.",
+  "architecture_style": "serverless",
+  "stack": {
+    "frontend": {
+      "choice": "React (Vite)",
+      "justification": "Lightweight client-rendered SPA provides rapid interactive state management with minimal framework overhead.",
+      "driven_by": [
+        "project.platforms",
+        "priorities.performance"
+      ],
+      "alternatives": [
+        {
+          "choice": "Next.js",
+          "why_not": "Server-side rendering runtime unnecessary for authenticated, non-SEO internal/SaaS app."
+        }
+      ],
+      "tradeoffs": [
+        "Initial bundle download before client hydration."
+      ]
+    },
+    "backend": {
+      "choice": "Go (Gin / Standard Lib)",
+      "justification": "Goroutine-per-connection concurrency model delivers sub-10ms WebSocket latency with minimal RAM footprint for heavy write/state synchronization.",
+      "driven_by": [
+        "project.type",
+        "team.languages",
+        "requirements.realtime",
+        "scale.workload",
+        "team.languages"
+      ],
+      "alternatives": [
+        {
+          "choice": "Node.js (Express)",
+          "why_not": "Single-threaded event loop can suffer event lag under intensive state calculations."
+        }
+      ],
+      "tradeoffs": [
+        "More verbose error handling and boilerplate code than Python."
+      ]
+    },
+    "database": {
+      "choice": "PostgreSQL",
+      "justification": "ACID-compliant relational database with JSONB support, indexing, and full text search; available as a managed service across all major clouds.",
+      "driven_by": [
+        "project.type",
+        "scale.data_volume_gb_12_months",
+        "scale.workload",
+        "priorities.cost"
+      ],
+      "alternatives": [
+        {
+          "choice": "MongoDB",
+          "why_not": "Lacks native relational foreign key integrity and ACID guarantees needed for structured transactional data."
+        }
+      ],
+      "tradeoffs": [
+        "Requires connection pooling (e.g. PgBouncer) under high concurrent connection spikes."
+      ]
+    },
+    "hosting": {
+      "choice": "Google Cloud Run (asia-south1)",
+      "justification": "Managed serverless container platform scaling to zero when idle; data center in Mumbai meets India data residency while staying well within the monthly budget.",
+      "driven_by": [
+        "budget.monthly_infra_usd",
+        "infrastructure.deployment_model",
+        "budget.monthly_infra_usd",
+        "team.has_devops",
+        "infrastructure.data_residency"
+      ],
+      "alternatives": [
+        {
+          "choice": "AWS ECS Fargate",
+          "why_not": "Fargate incurs fixed minimum compute costs without scale-to-zero, consuming more of a tight $100\u2013$150 budget."
+        }
+      ],
+      "tradeoffs": [
+        "Occasional 1\u20132 second cold starts on new container scaling instances."
+      ]
+    },
+    "supporting": [
+      {
+        "layer": "realtime",
+        "choice": "Socket.io with Redis Adapter",
+        "justification": "Bi-directional WebSocket communication enabling real-time chat, notifications, and collaborative state syncing.",
+        "driven_by": [
+          "requirements.realtime"
+        ],
+        "alternatives": [
+          {
+            "choice": "Pusher",
+            "why_not": "Proprietary commercial SaaS with steep pricing jumps under high concurrency."
+          }
+        ],
+        "tradeoffs": [
+          "Requires stateful connection management on backend workers."
+        ]
+      },
+      {
+        "layer": "storage",
+        "choice": "Amazon S3",
+        "justification": "Durable, encrypted cloud object storage for user document and photo uploads with presigned URL access.",
+        "driven_by": [
+          "requirements.file_media_storage",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Local Disk Storage",
+            "why_not": "Local container disks are ephemeral and lose user uploads on container restarts."
+          }
+        ],
+        "tradeoffs": [
+          "Outbound internet data egress transfer costs."
+        ]
+      },
+      {
+        "layer": "payments",
+        "choice": "Stripe",
+        "justification": "PCI-DSS compliant payment integration supporting cards, netbanking, and digital wallets without holding sensitive payment data.",
+        "driven_by": [
+          "requirements.payments",
+          "infrastructure.data_residency"
+        ],
+        "alternatives": [
+          {
+            "choice": "Razorpay",
+            "why_not": "Razorpay is tailored specifically for Indian domestic banking."
+          }
+        ],
+        "tradeoffs": [
+          "2% transaction processing fee."
+        ]
+      },
+      {
+        "layer": "auth",
+        "choice": "Supabase Auth / NextAuth",
+        "justification": "Authentication service resolving social requirements with secure token issuance.",
+        "driven_by": [
+          "requirements.auth",
+          "infrastructure.deployment_model"
+        ],
+        "alternatives": [
+          {
+            "choice": "Custom JWT Auth",
+            "why_not": "Rolling custom authentication risks token vulnerabilities and password hashing security flaws."
+          }
+        ],
+        "tradeoffs": [
+          "Vendor SDK dependency."
+        ]
+      },
+      {
+        "layer": "cache",
+        "choice": "Redis",
+        "justification": "In-memory sub-millisecond key-value caching to absorb read bursts and protect database connection limits.",
+        "driven_by": [
+          "requirements.p95_latency_ms",
+          "scale.traffic_pattern"
+        ],
+        "alternatives": [
+          {
+            "choice": "Memcached",
+            "why_not": "Memcached lacks rich data structures and pub/sub capabilities."
+          }
+        ],
+        "tradeoffs": [
+          "Volatile memory requiring persistence configuration."
+        ]
+      }
+    ]
+  },
+  "estimated_monthly_cost_usd": {
+    "min": 65.0,
+    "max": 230.0,
+    "assumptions": [
+      "Estimates based on published cloud pricing units and standard resource allocations."
+    ]
+  },
+  "warnings": [],
+  "assumptions": [],
+  "validation_errors": []
+}

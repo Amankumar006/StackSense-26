@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Tooling and coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Generated competition artifacts
+artifacts/
+reports/*.pdf
+screenshots/*.png
+screenshots/*.jpg
+
+# Local environment and editor files
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/

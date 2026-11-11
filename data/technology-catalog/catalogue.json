@@ -1,0 +1,1616 @@
+{
+  "catalogue_version": "1.0.0",
+  "reviewed_at": "2026-11-10",
+  "technologies": [
+    {
+      "id": "astro",
+      "name": "Astro",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted"
+      ],
+      "capabilities": [
+        "ssg",
+        "ssr",
+        "islands_architecture",
+        "markdown",
+        "seo_optimized"
+      ],
+      "limits_or_exclusions": [
+        "not_for_complex_desktop_apps",
+        "not_native_mobile"
+      ],
+      "regions_or_residency_notes": "Agnostic (static files or node runtime)",
+      "cost_basis": [
+        "free_open_source",
+        "zero_compute_when_static"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "javascript",
+          "html",
+          "css"
+        ],
+        "on_call_considerations": "None for static output"
+      },
+      "sources": [
+        {
+          "url": "https://astro.build",
+          "publisher": "Astro Technology Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Static site generation and content-first web sites"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "rabbitmq",
+      "name": "RabbitMQ (Self-Hosted)",
+      "category": "queue",
+      "deployment_models": [
+        "on_prem",
+        "air_gapped",
+        "self_hosted",
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "amqp_messaging",
+        "dead_letter_exchange",
+        "air_gapped_offline",
+        "priority_queues",
+        "pluggable_protocols"
+      ],
+      "limits_or_exclusions": [
+        "requires_local_cluster_management",
+        "memory_flow_control_under_high_backpressure"
+      ],
+      "regions_or_residency_notes": "Runs inside isolated on-premise private networks or self-hosted VMs",
+      "cost_basis": [
+        "free_open_source_mozilla_public_license"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "linux",
+          "erlang_runtime_basics",
+          "devops"
+        ],
+        "on_call_considerations": "Queue disk space thresholds, unacknowledged message accumulation"
+      },
+      "sources": [
+        {
+          "url": "https://www.rabbitmq.com",
+          "publisher": "VMware Tanzu / Broadcom",
+          "accessed_at": "2026-11-10",
+          "supports": "Widely deployed open source message broker"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "nextjs",
+      "name": "Next.js",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted"
+      ],
+      "capabilities": [
+        "ssr",
+        "ssg",
+        "api_routes",
+        "seo_optimized",
+        "react_ecosystem"
+      ],
+      "limits_or_exclusions": [
+        "requires_node_or_edge_runtime_for_ssr",
+        "not_native_mobile"
+      ],
+      "regions_or_residency_notes": "Deployable to any cloud or node container",
+      "cost_basis": [
+        "free_open_source",
+        "free_tier_available_on_vercel_netlify"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "javascript",
+          "typescript",
+          "react"
+        ],
+        "on_call_considerations": "Server memory and cold starts under high traffic"
+      },
+      "sources": [
+        {
+          "url": "https://nextjs.org/docs",
+          "publisher": "Vercel Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Fullstack React framework with SSR and static export"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "react",
+      "name": "React (Vite)",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "spa",
+        "client_rendered",
+        "rich_ui",
+        "stateful_apps"
+      ],
+      "limits_or_exclusions": [
+        "poor_seo_without_ssr",
+        "client_bundle_download"
+      ],
+      "regions_or_residency_notes": "Static assets deliverable anywhere",
+      "cost_basis": [
+        "free_open_source"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "javascript",
+          "typescript"
+        ],
+        "on_call_considerations": "None for client SPA"
+      },
+      "sources": [
+        {
+          "url": "https://react.dev",
+          "publisher": "Meta Open Source",
+          "accessed_at": "2026-11-10",
+          "supports": "Client-side component architecture"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "react_native_expo",
+      "name": "React Native (Expo)",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "cross_platform_mobile",
+        "android",
+        "ios",
+        "web",
+        "offline_storage_sqlite"
+      ],
+      "limits_or_exclusions": [
+        "heavier_than_native_on_sub_1gb_devices"
+      ],
+      "regions_or_residency_notes": "Client application running on user hardware",
+      "cost_basis": [
+        "free_open_source"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "javascript",
+          "typescript",
+          "react"
+        ],
+        "on_call_considerations": "App store release cycles and fragmentation"
+      },
+      "sources": [
+        {
+          "url": "https://expo.dev",
+          "publisher": "650 Industries Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Universal React Native apps for Android, iOS, and Web"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "flutter",
+      "name": "Flutter",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "cross_platform_mobile",
+        "android",
+        "ios",
+        "web",
+        "desktop",
+        "high_fps"
+      ],
+      "limits_or_exclusions": [
+        "dart_language_required",
+        "web_bundle_size"
+      ],
+      "regions_or_residency_notes": "Runs on device",
+      "cost_basis": [
+        "free_open_source"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "dart"
+        ],
+        "on_call_considerations": "Engine updates and platform channel maintenance"
+      },
+      "sources": [
+        {
+          "url": "https://flutter.dev",
+          "publisher": "Google LLC",
+          "accessed_at": "2026-11-10",
+          "supports": "Multiplatform compiled native apps from single codebase"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "frontend_none",
+      "name": "None",
+      "category": "frontend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "api_only",
+        "headless",
+        "backend_only"
+      ],
+      "limits_or_exclusions": [
+        "no_user_interface"
+      ],
+      "regions_or_residency_notes": "N/A",
+      "cost_basis": [
+        "zero_cost"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [],
+        "on_call_considerations": "None"
+      },
+      "sources": [
+        {
+          "url": "https://stacksense.local/spec",
+          "publisher": "Synergy 26 Official Spec",
+          "accessed_at": "2026-11-10",
+          "supports": "Headless or API-only architecture where frontend is omitted"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "async_rest_api",
+        "openapi_auto_docs",
+        "pydantic_validation",
+        "lightweight_concurrency"
+      ],
+      "limits_or_exclusions": [
+        "single_threaded_cpu_bottleneck_for_heavy_math"
+      ],
+      "regions_or_residency_notes": "Runs in any container or cloud region",
+      "cost_basis": [
+        "free_open_source",
+        "low_memory_footprint"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "python"
+        ],
+        "on_call_considerations": "ASGI worker sizing and connection pools"
+      },
+      "sources": [
+        {
+          "url": "https://fastapi.tiangolo.com",
+          "publisher": "Sebasti\u00e1n Ram\u00edrez",
+          "accessed_at": "2026-11-10",
+          "supports": "High performance asynchronous Python web framework"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "go_gin",
+      "name": "Go (Gin / Standard Lib)",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "ultra_high_concurrency",
+        "sub_10ms_latency",
+        "low_memory_binary",
+        "websocket_friendly"
+      ],
+      "limits_or_exclusions": [
+        "more_verbose_than_scripting_languages"
+      ],
+      "regions_or_residency_notes": "Compiles to single static binary; deploys anywhere",
+      "cost_basis": [
+        "free_open_source",
+        "minimal_ram_requirement"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "go"
+        ],
+        "on_call_considerations": "Goroutine leaks under unbounded channels"
+      },
+      "sources": [
+        {
+          "url": "https://go.dev",
+          "publisher": "Google Open Source",
+          "accessed_at": "2026-11-10",
+          "supports": "Fast, compiled, concurrent systems language"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "spring_boot",
+      "name": "Spring Boot",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "enterprise_fintech",
+        "acid_transactions",
+        "rbi_compliance",
+        "pci_dss_ready",
+        "mature_ecosystem"
+      ],
+      "limits_or_exclusions": [
+        "higher_memory_footprint_512mb_plus",
+        "slower_startup_than_go"
+      ],
+      "regions_or_residency_notes": "JVM platform supported on all enterprise clouds and on-prem",
+      "cost_basis": [
+        "free_open_source",
+        "requires_higher_memory_vm"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "java",
+          "kotlin"
+        ],
+        "on_call_considerations": "JVM heap tuning and garbage collection pauses"
+      },
+      "sources": [
+        {
+          "url": "https://spring.io/projects/spring-boot",
+          "publisher": "Broadcom / VMware",
+          "accessed_at": "2026-11-10",
+          "supports": "Enterprise Java/Kotlin framework for resilient transactional systems"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "aspnet_core",
+      "name": "ASP.NET Core (.NET 8)",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "high_throughput",
+        "azure_ad_integration",
+        "sql_server_native",
+        "enterprise_governance"
+      ],
+      "limits_or_exclusions": [
+        "csharp_skill_required"
+      ],
+      "regions_or_residency_notes": "Runs cross-platform on Linux, Windows, Azure, AWS",
+      "cost_basis": [
+        "free_open_source_core",
+        "optimized_resource_usage"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "csharp",
+          "sql"
+        ],
+        "on_call_considerations": "Kestrel thread pool configuration"
+      },
+      "sources": [
+        {
+          "url": "https://dotnet.microsoft.com",
+          "publisher": "Microsoft Corporation",
+          "accessed_at": "2026-11-10",
+          "supports": "High performance enterprise framework for .NET"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "nodejs_express",
+      "name": "Node.js (Express / Fastify)",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "javascript_unification",
+        "rapid_prototyping",
+        "massive_npm_ecosystem",
+        "json_native"
+      ],
+      "limits_or_exclusions": [
+        "event_loop_blocking_on_heavy_cpu"
+      ],
+      "regions_or_residency_notes": "Deployable anywhere Node.js runs",
+      "cost_basis": [
+        "free_open_source"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "javascript",
+          "typescript"
+        ],
+        "on_call_considerations": "Unhandled promise rejections and event loop lag"
+      },
+      "sources": [
+        {
+          "url": "https://nodejs.org",
+          "publisher": "OpenJS Foundation",
+          "accessed_at": "2026-11-10",
+          "supports": "Asynchronous event-driven JavaScript runtime"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "backend_none",
+      "name": "None",
+      "category": "backend",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "static_content",
+        "zero_server_maintenance"
+      ],
+      "limits_or_exclusions": [
+        "no_server_side_logic"
+      ],
+      "regions_or_residency_notes": "N/A",
+      "cost_basis": [
+        "zero_cost"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [],
+        "on_call_considerations": "None"
+      },
+      "sources": [
+        {
+          "url": "https://stacksense.local/spec",
+          "publisher": "Synergy 26 Official Spec",
+          "accessed_at": "2026-11-10",
+          "supports": "Static site architecture where no backend server is needed"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "postgresql",
+      "name": "PostgreSQL",
+      "category": "database",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "relational_acid",
+        "jsonb_document",
+        "full_text_search",
+        "spatial_gis",
+        "dpdp_compliant"
+      ],
+      "limits_or_exclusions": [
+        "connection_pooling_required_at_high_concurrency"
+      ],
+      "regions_or_residency_notes": "Supported in all global and India cloud regions (AWS ap-south-1, GCP asia-south1, Azure Central India)",
+      "cost_basis": [
+        "free_open_source_self_hosted",
+        "managed_instances_from_15_to_100_usd_mo"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "sql"
+        ],
+        "on_call_considerations": "Vacuuming, connection pooling with PgBouncer, and index health"
+      },
+      "sources": [
+        {
+          "url": "https://www.postgresql.org",
+          "publisher": "PostgreSQL Global Development Group",
+          "accessed_at": "2026-11-10",
+          "supports": "Advanced open-source relational database system"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "amazon_aurora_postgres",
+      "name": "Amazon Aurora PostgreSQL",
+      "category": "database",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "multi_az_failover",
+        "auto_scaling_storage",
+        "rbi_localisation",
+        "pci_dss",
+        "iso27001",
+        "audit_logging"
+      ],
+      "limits_or_exclusions": [
+        "aws_cloud_only",
+        "higher_minimum_cost_from_60_usd_mo"
+      ],
+      "regions_or_residency_notes": "Fully available in AWS Mumbai (ap-south-1) and Hyderabad (ap-south-2)",
+      "cost_basis": [
+        "compute_per_hour_plus_storage_io_from_60_to_1000_plus_usd"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "sql",
+          "aws_iam"
+        ],
+        "on_call_considerations": "Automated backups and fast crash recovery"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/rds/aurora/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "High availability managed relational database with enterprise SLA"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "mssql_server",
+      "name": "Microsoft SQL Server",
+      "category": "database",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "enterprise_transact_sql",
+        "azure_integration",
+        "iso27001",
+        "auditability"
+      ],
+      "limits_or_exclusions": [
+        "commercial_licensing_for_standard_enterprise"
+      ],
+      "regions_or_residency_notes": "On-premise deployable, Azure India data centers",
+      "cost_basis": [
+        "license_fee_or_managed_azure_sql_from_15_to_500_plus_usd"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "sql",
+          "csharp"
+        ],
+        "on_call_considerations": "Transaction log growth and index defragmentation"
+      },
+      "sources": [
+        {
+          "url": "https://www.microsoft.com/sql-server",
+          "publisher": "Microsoft Corporation",
+          "accessed_at": "2026-11-10",
+          "supports": "Enterprise relational database management system"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "sqlite_embedded",
+      "name": "SQLite / Room (Client-side)",
+      "category": "database",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "offline_first",
+        "embedded_zero_config",
+        "local_device_storage",
+        "android_ios_native"
+      ],
+      "limits_or_exclusions": [
+        "single_writer_not_for_concurrent_server_database"
+      ],
+      "regions_or_residency_notes": "Data stays on user device",
+      "cost_basis": [
+        "free_open_source",
+        "zero_server_cost"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "sql"
+        ],
+        "on_call_considerations": "Local schema migrations on client app update"
+      },
+      "sources": [
+        {
+          "url": "https://www.sqlite.org",
+          "publisher": "SQLite Development Team",
+          "accessed_at": "2026-11-10",
+          "supports": "Self-contained zero-configuration transactional SQL database engine"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "database_none",
+      "name": "None",
+      "category": "database",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "no_database_needed",
+        "static_markdown_files"
+      ],
+      "limits_or_exclusions": [
+        "no_persistent_user_data"
+      ],
+      "regions_or_residency_notes": "N/A",
+      "cost_basis": [
+        "zero_cost"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [],
+        "on_call_considerations": "None"
+      },
+      "sources": [
+        {
+          "url": "https://stacksense.local/spec",
+          "publisher": "Synergy 26 Official Spec",
+          "accessed_at": "2026-11-10",
+          "supports": "Stateless or static application with no database requirement"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "netlify_free",
+      "name": "Netlify (Free Tier)",
+      "category": "hosting",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "cdn_edge_hosting",
+        "ssl_included",
+        "serverless_forms",
+        "git_deploy"
+      ],
+      "limits_or_exclusions": [
+        "bandwidth_limit_100gb_mo",
+        "build_minutes_limit"
+      ],
+      "regions_or_residency_notes": "Global CDN edge nodes",
+      "cost_basis": [
+        "free_tier_0_usd",
+        "scales_to_pro_at_19_usd_mo"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "git"
+        ],
+        "on_call_considerations": "None for static sites"
+      },
+      "sources": [
+        {
+          "url": "https://www.netlify.com/pricing/",
+          "publisher": "Netlify, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Hosting for static sites and serverless functions"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "google_cloud_run",
+      "name": "Google Cloud Run",
+      "category": "hosting",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "serverless_containers",
+        "scale_to_zero",
+        "india_region_asia_south1",
+        "low_cold_start",
+        "managed_ssl"
+      ],
+      "limits_or_exclusions": [
+        "stateless_containers_only",
+        "request_timeout_60min"
+      ],
+      "regions_or_residency_notes": "Physical data centers in Mumbai (asia-south1) and Delhi (asia-south2)",
+      "cost_basis": [
+        "generous_free_tier",
+        "pay_per_use_cpu_memory_requests"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "docker",
+          "gcp"
+        ],
+        "on_call_considerations": "Container concurrency settings and memory limits"
+      },
+      "sources": [
+        {
+          "url": "https://cloud.google.com/run/pricing",
+          "publisher": "Google Cloud",
+          "accessed_at": "2026-11-10",
+          "supports": "Managed compute platform running stateless containers"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "aws_ecs_fargate",
+      "name": "AWS ECS Fargate",
+      "category": "hosting",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "serverless_containers",
+        "vpc_isolation",
+        "ap_south_1_india",
+        "rbi_localisation",
+        "pci_dss",
+        "iso27001"
+      ],
+      "limits_or_exclusions": [
+        "no_scale_to_zero_minimum_instance_cost"
+      ],
+      "regions_or_residency_notes": "Full AWS Mumbai (ap-south-1) compliance",
+      "cost_basis": [
+        "per_vcpu_and_memory_per_hour_from_15_usd_mo_per_container"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "docker",
+          "aws_iam"
+        ],
+        "on_call_considerations": "Task auto-scaling rules and cloudwatch alarms"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/fargate/pricing/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Serverless container orchestration without managing EC2 instances"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "azure_app_service",
+      "name": "Azure App Service",
+      "category": "hosting",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "managed_web_hosting",
+        "azure_ad_native",
+        "central_india_region",
+        "iso27001",
+        "dotnet_optimized"
+      ],
+      "limits_or_exclusions": [
+        "azure_cloud_ecosystem"
+      ],
+      "regions_or_residency_notes": "Central India (Pune), South India (Chennai)",
+      "cost_basis": [
+        "free_shared_basic_tier_from_13_usd_mo_to_premium"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "csharp",
+          "azure"
+        ],
+        "on_call_considerations": "App service plan scale-out triggers"
+      },
+      "sources": [
+        {
+          "url": "https://azure.microsoft.com/en-us/pricing/details/app-service/",
+          "publisher": "Microsoft Corporation",
+          "accessed_at": "2026-11-10",
+          "supports": "Fully managed platform for building, deploying, and scaling web apps"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "self_hosted_vps",
+      "name": "Linux Cloud VM / VPS (Hetzner / LightSail)",
+      "category": "hosting",
+      "deployment_models": [
+        "self_hosted",
+        "managed_cloud",
+        "on_prem"
+      ],
+      "capabilities": [
+        "full_root_access",
+        "docker_compose",
+        "cost_effective_fixed_monthly",
+        "no_vendor_lock_in"
+      ],
+      "limits_or_exclusions": [
+        "requires_manual_os_patching_and_devops_skill"
+      ],
+      "regions_or_residency_notes": "Global and India locations (e.g. AWS Lightsail Mumbai)",
+      "cost_basis": [
+        "fixed_from_4_to_40_usd_mo"
+      ],
+      "operational_profile": {
+        "maintenance_level": "high",
+        "skills_required": [
+          "linux",
+          "docker",
+          "devops"
+        ],
+        "on_call_considerations": "OS patching, disk full alarms, and manual failover"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/lightsail/pricing/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Virtual private servers with predictable monthly pricing"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "redis_cache",
+      "name": "Redis",
+      "category": "cache",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "in_memory_sub_ms",
+        "session_store",
+        "pub_sub",
+        "rate_limiting"
+      ],
+      "limits_or_exclusions": [
+        "ram_cost_expensive_at_scale"
+      ],
+      "regions_or_residency_notes": "Deployable locally or managed cloud",
+      "cost_basis": [
+        "free_open_source_self_hosted",
+        "managed_from_15_usd_mo"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "redis"
+        ],
+        "on_call_considerations": "Memory eviction policy and cluster failover"
+      },
+      "sources": [
+        {
+          "url": "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/",
+          "publisher": "Redis Ltd.",
+          "accessed_at": "2026-11-10",
+          "supports": "In-memory data structure store used as a cache and message broker"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "aws_sqs",
+      "name": "Amazon SQS (FIFO & Standard)",
+      "category": "queue",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "managed_message_queue",
+        "dead_letter_queue",
+        "fifo_exact_ordering",
+        "rbi_localisation",
+        "pci_dss"
+      ],
+      "limits_or_exclusions": [
+        "aws_cloud_only"
+      ],
+      "regions_or_residency_notes": "AWS Mumbai (ap-south-1)",
+      "cost_basis": [
+        "pay_per_million_requests_first_1m_free"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "aws_iam"
+        ],
+        "on_call_considerations": "Dead-letter queue consumer alerting"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/sqs/pricing/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Fully managed message queuing service for microservices"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "meilisearch",
+      "name": "Meilisearch",
+      "category": "search",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "typo_tolerant_search",
+        "instant_search_sub_50ms",
+        "lightweight_single_binary",
+        "fast_setup"
+      ],
+      "limits_or_exclusions": [
+        "not_for_multi_terabyte_log_analytics"
+      ],
+      "regions_or_residency_notes": "Agnostic self-hosted or cloud",
+      "cost_basis": [
+        "free_open_source_self_hosted",
+        "cloud_from_30_usd_mo"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "rest_api"
+        ],
+        "on_call_considerations": "Disk storage for index files"
+      },
+      "sources": [
+        {
+          "url": "https://www.meilisearch.com",
+          "publisher": "Meilisearch SAS",
+          "accessed_at": "2026-11-10",
+          "supports": "Lightning fast, typo-tolerant search engine"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "firebase_auth",
+      "name": "Firebase Auth",
+      "category": "auth",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "phone_otp",
+        "social_login",
+        "email_password",
+        "sdk_for_android_ios_web"
+      ],
+      "limits_or_exclusions": [
+        "google_cloud_dependency"
+      ],
+      "regions_or_residency_notes": "Global identity service",
+      "cost_basis": [
+        "free_for_first_10k_monthly_active_users_phone_sms_costs_apply"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "javascript",
+          "mobile_sdk"
+        ],
+        "on_call_considerations": "SMS OTP quota limits"
+      },
+      "sources": [
+        {
+          "url": "https://firebase.google.com/pricing",
+          "publisher": "Google LLC",
+          "accessed_at": "2026-11-10",
+          "supports": "Drop-in authentication solution supporting phone OTP and social logins"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "entra_id",
+      "name": "Microsoft Entra ID (Azure AD)",
+      "category": "auth",
+      "deployment_models": [
+        "managed_cloud",
+        "hybrid"
+      ],
+      "capabilities": [
+        "enterprise_sso",
+        "saml_oidc",
+        "conditional_access",
+        "m365_integration",
+        "iso27001"
+      ],
+      "limits_or_exclusions": [
+        "enterprise_b2b_focus"
+      ],
+      "regions_or_residency_notes": "Global and India tenant regions",
+      "cost_basis": [
+        "included_in_m365_or_per_user_license"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "azure_ad"
+        ],
+        "on_call_considerations": "App registration client secret rotation"
+      },
+      "sources": [
+        {
+          "url": "https://www.microsoft.com/en-us/security/business/identity-access/microsoft-entra-id",
+          "publisher": "Microsoft Corporation",
+          "accessed_at": "2026-11-10",
+          "supports": "Enterprise cloud identity and access management solution"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "aws_s3",
+      "name": "Amazon S3",
+      "category": "storage",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "object_storage",
+        "versioning",
+        "presigned_urls",
+        "ap_south_1_india",
+        "rbi_localisation",
+        "pci_dss"
+      ],
+      "limits_or_exclusions": [
+        "aws_cloud_only"
+      ],
+      "regions_or_residency_notes": "AWS Mumbai (ap-south-1)",
+      "cost_basis": [
+        "pay_per_gb_stored_0_023_usd_gb_plus_transfer"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "aws_iam"
+        ],
+        "on_call_considerations": "Bucket policy security and lifecycle rules"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/s3/pricing/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Industry-leading scalability, data availability, security, and performance"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "razorpay",
+      "name": "Razorpay Payment Gateway",
+      "category": "payments",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "upi_qr_collect",
+        "netbanking_india",
+        "cards",
+        "rbi_compliant",
+        "dpdp_ready"
+      ],
+      "limits_or_exclusions": [
+        "india_focus"
+      ],
+      "regions_or_residency_notes": "India data residency and domestic banking compliance",
+      "cost_basis": [
+        "standard_2_percent_per_transaction_no_fixed_monthly_fee"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "webhook_handling"
+        ],
+        "on_call_considerations": "Webhook idempotency and signature verification"
+      },
+      "sources": [
+        {
+          "url": "https://razorpay.com/pricing/",
+          "publisher": "Razorpay Software Private Limited",
+          "accessed_at": "2026-11-10",
+          "supports": "Indian payments gateway supporting UPI, Cards, and Netbanking"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "category": "payments",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "global_cards",
+        "subscription_billing",
+        "webhooks",
+        "pci_dss_level_1"
+      ],
+      "limits_or_exclusions": [
+        "higher_fees_for_international_cards"
+      ],
+      "regions_or_residency_notes": "Global service",
+      "cost_basis": [
+        "2_9_percent_plus_30_cents_per_charge"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "webhook_handling"
+        ],
+        "on_call_considerations": "Stripe webhook retry handling"
+      },
+      "sources": [
+        {
+          "url": "https://stripe.com/pricing",
+          "publisher": "Stripe, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Global online payment processing and recurring subscription management"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "socketio_redis_realtime",
+      "name": "Socket.io with Redis Adapter",
+      "category": "realtime",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "bidirectional_websockets",
+        "presence",
+        "horizontal_scaling_redis",
+        "low_latency"
+      ],
+      "limits_or_exclusions": [
+        "stateful_connection_management"
+      ],
+      "regions_or_residency_notes": "Self-hostable anywhere",
+      "cost_basis": [
+        "free_open_source",
+        "depends_on_host_server_ram"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "javascript",
+          "redis"
+        ],
+        "on_call_considerations": "Heartbeat timeout tuning and reconnect storms"
+      },
+      "sources": [
+        {
+          "url": "https://socket.io/docs/v4/redis-adapter/",
+          "publisher": "Socket.IO Open Source",
+          "accessed_at": "2026-11-10",
+          "supports": "Scalable real-time event broadcasting over WebSockets"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "aws_sagemaker_serverless",
+      "name": "AWS SageMaker Serverless Inference",
+      "category": "ml",
+      "deployment_models": [
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "serverless_ml_inference",
+        "pay_per_second_compute",
+        "scale_to_zero",
+        "ap_south_1_india"
+      ],
+      "limits_or_exclusions": [
+        "cold_starts_for_large_weights",
+        "aws_only"
+      ],
+      "regions_or_residency_notes": "AWS Mumbai (ap-south-1)",
+      "cost_basis": [
+        "pay_per_request_and_inference_duration_0_budget_when_idle"
+      ],
+      "operational_profile": {
+        "maintenance_level": "low",
+        "skills_required": [
+          "python",
+          "aws_sagemaker"
+        ],
+        "on_call_considerations": "Cold start latency monitoring"
+      },
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/sagemaker/pricing/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Managed serverless machine learning model deployment"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "opentelemetry_prometheus",
+      "name": "OpenTelemetry + Prometheus",
+      "category": "observability",
+      "deployment_models": [
+        "managed_cloud",
+        "self_hosted",
+        "on_prem",
+        "air_gapped"
+      ],
+      "capabilities": [
+        "vendor_neutral_telemetry",
+        "distributed_tracing",
+        "metrics",
+        "open_source"
+      ],
+      "limits_or_exclusions": [
+        "requires_scraping_endpoint_and_storage_backend"
+      ],
+      "regions_or_residency_notes": "Self-hostable or cloud managed",
+      "cost_basis": [
+        "free_open_source"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "devops"
+        ],
+        "on_call_considerations": "Time series storage retention"
+      },
+      "sources": [
+        {
+          "url": "https://opentelemetry.io",
+          "publisher": "Cloud Native Computing Foundation (CNCF)",
+          "accessed_at": "2026-11-10",
+          "supports": "Vendor-neutral observability standard for traces and metrics"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "on_prem_docker",
+      "name": "On-Premise Server (Docker Compose / Podman)",
+      "category": "hosting",
+      "deployment_models": [
+        "on_prem",
+        "air_gapped",
+        "self_hosted"
+      ],
+      "capabilities": [
+        "on_premise_isolation",
+        "air_gapped_offline",
+        "full_hardware_control",
+        "zero_cloud_cost"
+      ],
+      "limits_or_exclusions": [
+        "requires_internal_datacenter_hardware",
+        "manual_disaster_recovery"
+      ],
+      "regions_or_residency_notes": "Strict physical on-premise hardware control",
+      "cost_basis": [
+        "hardware_capital_cost_zero_monthly_cloud_fee"
+      ],
+      "operational_profile": {
+        "maintenance_level": "high",
+        "skills_required": [
+          "linux",
+          "docker",
+          "devops"
+        ],
+        "on_call_considerations": "Physical server hardware and UPS battery failover"
+      },
+      "sources": [
+        {
+          "url": "https://docs.docker.com/compose/",
+          "publisher": "Docker Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Container deployment on isolated bare-metal servers"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "minio_storage",
+      "name": "MinIO (Self-Hosted S3-Compatible Storage)",
+      "category": "storage",
+      "deployment_models": [
+        "on_prem",
+        "air_gapped",
+        "self_hosted",
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "object_storage",
+        "s3_compatible_api",
+        "air_gapped_ready",
+        "local_nvme_storage"
+      ],
+      "limits_or_exclusions": [
+        "requires_local_disk_volume_monitoring"
+      ],
+      "regions_or_residency_notes": "Resides entirely inside customer data center",
+      "cost_basis": [
+        "free_open_source_community_edition"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "linux",
+          "storage_admin"
+        ],
+        "on_call_considerations": "Disk storage capacity alerting"
+      },
+      "sources": [
+        {
+          "url": "https://min.io",
+          "publisher": "MinIO Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "High performance S3-compatible enterprise object storage"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    },
+    {
+      "id": "keycloak_auth",
+      "name": "Keycloak (Self-Hosted Identity)",
+      "category": "auth",
+      "deployment_models": [
+        "on_prem",
+        "air_gapped",
+        "self_hosted",
+        "managed_cloud"
+      ],
+      "capabilities": [
+        "self_hosted_sso",
+        "oidc_oauth2",
+        "air_gapped_offline",
+        "user_federation_ldap"
+      ],
+      "limits_or_exclusions": [
+        "requires_dedicated_relational_database"
+      ],
+      "regions_or_residency_notes": "Runs in isolated private networks without external connectivity",
+      "cost_basis": [
+        "free_open_source_apache_2"
+      ],
+      "operational_profile": {
+        "maintenance_level": "medium",
+        "skills_required": [
+          "java",
+          "identity_security"
+        ],
+        "on_call_considerations": "Keycloak database migration and realm backups"
+      },
+      "sources": [
+        {
+          "url": "https://www.keycloak.org",
+          "publisher": "Red Hat / CNCF",
+          "accessed_at": "2026-11-10",
+          "supports": "Open-source identity and access management for modern applications"
+        }
+      ],
+      "review_status": "verified",
+      "reviewed_at": "2026-11-10"
+    }
+  ],
+  "compatibility_rules": [
+    {
+      "id": "rule_astro_no_backend_for_content",
+      "kind": "preferred_with",
+      "applies_to": [
+        "astro",
+        "backend_none"
+      ],
+      "condition": "project.type == content_site",
+      "rationale": "Content-first sites with markdown blogging are optimal with Astro static generation and require no backend server.",
+      "sources": [
+        {
+          "url": "https://astro.build",
+          "publisher": "Astro Technology Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Static content generation"
+        }
+      ],
+      "review_status": "verified"
+    },
+    {
+      "id": "rule_aspnet_with_mssql",
+      "kind": "preferred_with",
+      "applies_to": [
+        "aspnet_core",
+        "mssql_server"
+      ],
+      "rationale": "ASP.NET Core has native first-class integration with Microsoft SQL Server and Entity Framework Core.",
+      "sources": [
+        {
+          "url": "https://learn.microsoft.com/en-us/ef/core/",
+          "publisher": "Microsoft Corporation",
+          "accessed_at": "2026-11-10",
+          "supports": "Entity Framework Core provider for SQL Server"
+        }
+      ],
+      "review_status": "verified"
+    },
+    {
+      "id": "rule_spring_with_aurora",
+      "kind": "preferred_with",
+      "applies_to": [
+        "spring_boot",
+        "amazon_aurora_postgres"
+      ],
+      "rationale": "Spring Boot with Spring Data JPA paired with Amazon Aurora provides enterprise-grade transactional resilience and multi-AZ failover.",
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/rds/aurora/",
+          "publisher": "Amazon Web Services, Inc.",
+          "accessed_at": "2026-11-10",
+          "supports": "Enterprise relational transactions"
+        }
+      ],
+      "review_status": "verified"
+    },
+    {
+      "id": "rule_mobile_platforms_require_mobile_frontend",
+      "kind": "requires",
+      "applies_to": [
+        "react_native_expo",
+        "flutter"
+      ],
+      "condition": "android in project.platforms or ios in project.platforms",
+      "rationale": "Android or iOS platform targets require a mobile framework rather than a pure web SSR framework.",
+      "sources": [
+        {
+          "url": "https://reactnative.dev",
+          "publisher": "Meta Open Source",
+          "accessed_at": "2026-11-10",
+          "supports": "Mobile platform rendering"
+        }
+      ],
+      "review_status": "verified"
+    }
+  ]
+}

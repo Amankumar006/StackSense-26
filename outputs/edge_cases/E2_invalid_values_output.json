@@ -1,0 +1,54 @@
+{
+  "scenario_id": "E2",
+  "engine_version": "1.0.0",
+  "status": "invalid_input",
+  "summary": "Input validation failed with field-level schema errors.",
+  "warnings": [],
+  "assumptions": [
+    "requirements.offline_support defaulted to false",
+    "requirements.full_text_search defaulted to false",
+    "requirements.file_media_storage defaulted to false",
+    "requirements.payments defaulted to false",
+    "requirements.multi_tenant defaulted to false",
+    "requirements.seo_critical defaulted to false",
+    "requirements.p95_latency_ms defaulted to null"
+  ],
+  "validation_errors": [
+    {
+      "field": "project.type",
+      "message": "Input should be 'content_site', 'web_app', 'saas_b2b', 'ecommerce', 'marketplace', 'social', 'realtime_collab', 'fintech', 'healthtech', 'data_analytics', 'iot', 'ai_ml_product', 'internal_tool', 'gaming', 'api_platform' or 'other'"
+    },
+    {
+      "field": "scale.users_at_launch",
+      "message": "Input should be greater than or equal to 0"
+    },
+    {
+      "field": "scale.users_12_months",
+      "message": "Input should be greater than or equal to 0"
+    },
+    {
+      "field": "scale.data_volume_gb_12_months",
+      "message": "Input should be greater than or equal to 0"
+    },
+    {
+      "field": "team.size",
+      "message": "Input should be greater than or equal to 1"
+    },
+    {
+      "field": "budget.monthly_infra_usd",
+      "message": "Input should be greater than or equal to 0"
+    },
+    {
+      "field": "timeline.mvp_weeks",
+      "message": "Input should be greater than or equal to 1"
+    },
+    {
+      "field": "priorities.cost",
+      "message": "Input should be less than or equal to 5"
+    },
+    {
+      "field": "priorities.performance",
+      "message": "Input should be greater than or equal to 1"
+    }
+  ]
+}
