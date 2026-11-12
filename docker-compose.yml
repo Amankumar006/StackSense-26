@@ -1,0 +1,17 @@
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./outputs:/app/outputs
+      - ./data:/app/data
+    environment:
+      - ENABLE_LLM=false
+    command: ["batch", "data/scenarios", "-o", "outputs"]
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["pytest", "-v"]

@@ -81,6 +81,7 @@ StackSense takes structured project parameters (scale, team experience and langu
 
 ## 4. Step-by-Step Local Setup
 
+### Option A: Python Virtual Environment (Recommended, <1 minute)
 ```bash
 # 1. Clone repository and navigate to workspace
 git clone <repo-url>
@@ -93,6 +94,18 @@ source .venv/bin/activate
 # 3. Upgrade pip and install package in editable mode
 python -m pip install --upgrade pip
 python -m pip install -e .
+```
+
+### Option B: Docker Compose Setup (Zero local Python dependencies)
+```bash
+# 1. Build Docker image
+docker compose build
+
+# 2. Run batch evaluation on all public scenarios
+docker compose up engine
+
+# 3. Run full test suite in container
+docker compose run test
 ```
 
 ---

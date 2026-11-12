@@ -19,6 +19,7 @@ screenshots/*.jpg
 # Local environment and editor files
 .env
 .env.*
+!.env.example
 .DS_Store
 .idea/
 .vscode/
