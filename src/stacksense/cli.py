@@ -102,6 +102,17 @@ def run_batch(scenario_dir: str, output_dir: str = "outputs", no_llm: bool = Tru
     return 0
 
 
+def run_web(host: str = "127.0.0.1", port: int = 8000) -> int:
+    """Launches the StackSense interactive web dashboard."""
+    import uvicorn
+    from stacksense.web import app
+    print(f"\n🚀 Starting StackSense Web Dashboard on http://{host}:{port} ...")
+    print(f"Interactive UI available at: http://{host}:{port}")
+    print(f"API Docs available at:        http://{host}:{port}/docs\n")
+    uvicorn.run(app, host=host, port=port)
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="stacksense",
@@ -139,12 +150,19 @@ def main() -> None:
         help="Disable all LLM calls (default: True)",
     )
 
+    # Command: web
+    web_parser = subparsers.add_parser("web", help="Launch interactive web dashboard")
+    web_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
+    web_parser.add_argument("--port", type=int, default=8000, help="Port number (default: 8000)")
+
     args = parser.parse_args()
 
     if args.command == "run":
         sys.exit(run_single(args.scenario, args.output, no_llm=args.no_llm))
     elif args.command == "batch":
         sys.exit(run_batch(args.directory, args.output_dir, no_llm=args.no_llm))
+    elif args.command == "web":
+        sys.exit(run_web(args.host, args.port))
     else:
         parser.print_help()
         sys.exit(1)
