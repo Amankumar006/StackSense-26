@@ -12,6 +12,7 @@ htmlcov/
 
 # Generated competition artifacts
 artifacts/
+dist/
 reports/*.pdf
 screenshots/*.png
 screenshots/*.jpg
