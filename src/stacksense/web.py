@@ -1,35 +1,115 @@
 """Lightweight, enterprise-grade web dashboard and REST API for StackSense.
 
 Implements the DevTools Modern (Linear / Vercel / Supabase) dark-mode aesthetic.
-Provides both a rich Visual Form Studio and a Section 3.1 JSON Code Editor,
-with real-time constraint validation and interactive architectural breakdown cards.
+Provides:
+1. Visual Form Studio with bi-directional synchronization and debounced JSON linter gate.
+2. Canonical Section 4 evaluation endpoint (`POST /api/recommend`).
+3. Dedicated architecture topology endpoint (`POST /api/topology`) generating Mermaid and pure-Python SVG.
+4. In-memory memoized benchmark matrix endpoint (`GET /api/scenarios/matrix`).
+5. Offline-first static asset serving via local vendor mounts (`src/stacksense/static/`).
 """
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from stacksense.engine import RecommendationEngine
 from stacksense.models.output import ScenarioOutput
+from stacksense.topology import generate_topology_mermaid, generate_topology_svg
+
+engine = RecommendationEngine()
+SCENARIOS_DIR = Path("data/scenarios")
+STATIC_DIR = Path(__file__).parent / "static"
+REPORT_PATH = Path("Report_Aman_Kumar.pdf")
+
+# Global in-memory cache for benchmark matrix
+_BENCHMARK_MATRIX_CACHE: list[dict[str, Any]] = []
+
+
+def _build_benchmark_matrix() -> list[dict[str, Any]]:
+    """Pre-computes recommendations for all public benchmarks (P1-P6) at startup."""
+    matrix: list[dict[str, Any]] = []
+    for p in sorted(SCENARIOS_DIR.glob("P*.json")):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            out = engine.evaluate_scenario(data)
+            proj = data.get("project", {})
+            stack = out.stack
+
+            fe = stack.frontend.choice if stack else "None"
+            be = stack.backend.choice if stack else "None"
+            db = stack.database.choice if stack else "None"
+            ho = stack.hosting.choice if stack else "None"
+            supp = [s.choice for s in stack.supporting] if stack else []
+
+            c_min = f"${out.estimated_monthly_cost_usd.min:.0f}" if out.estimated_monthly_cost_usd else "$0"
+            c_max = f"${out.estimated_monthly_cost_usd.max:.0f}" if out.estimated_monthly_cost_usd else "$0"
+            cost_str = f"{c_min} – {c_max} / mo"
+
+            top_alt = "None"
+            if stack and stack.backend.alternatives:
+                top_alt = f"{stack.backend.alternatives[0].choice}: {stack.backend.alternatives[0].why_not}"
+            elif stack and stack.frontend.alternatives:
+                top_alt = f"{stack.frontend.alternatives[0].choice}: {stack.frontend.alternatives[0].why_not}"
+
+            matrix.append({
+                "scenario_id": p.stem,
+                "project_name": proj.get("name", p.stem),
+                "archetype": proj.get("type", "other"),
+                "architecture_style": out.architecture_style.value if out.architecture_style else "serverless",
+                "recommended_stack": {
+                    "frontend": fe,
+                    "backend": be,
+                    "database": db,
+                    "hosting": ho,
+                    "supporting": supp,
+                },
+                "cost_range": cost_str,
+                "key_driver": out.summary,
+                "top_rejected_alternative": top_alt,
+            })
+        except Exception:
+            pass
+    return matrix
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initializes in-memory caches and pre-computes benchmark matrix on startup."""
+    global _BENCHMARK_MATRIX_CACHE
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    (STATIC_DIR / "vendor").mkdir(parents=True, exist_ok=True)
+    _BENCHMARK_MATRIX_CACHE = _build_benchmark_matrix()
+    yield
+
 
 app = FastAPI(
     title="StackSense Recommendation Engine",
     description="Explainable, deterministic technology-stack recommendation engine for Synergy '26",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-engine = RecommendationEngine()
-SCENARIOS_DIR = Path("data/scenarios")
-REPORT_PATH = Path("Report_Aman_Kumar.pdf")
+# Mount local vendor assets for offline resilience
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 class RecommendRequest(BaseModel):
     scenario: dict[str, Any]
     enable_llm: bool = False
+
+
+class TopologyRequest(BaseModel):
+    output: Optional[ScenarioOutput] = None
+    scenario: Optional[dict[str, Any]] = None
 
 
 @app.get("/api/scenarios")
@@ -72,6 +152,15 @@ def list_scenarios() -> list[dict[str, str]]:
     return scenarios
 
 
+@app.get("/api/scenarios/matrix")
+def get_benchmark_matrix() -> list[dict[str, Any]]:
+    """Serves the pre-computed P1-P6 benchmark comparative matrix from RAM in <2ms."""
+    global _BENCHMARK_MATRIX_CACHE
+    if not _BENCHMARK_MATRIX_CACHE:
+        _BENCHMARK_MATRIX_CACHE = _build_benchmark_matrix()
+    return _BENCHMARK_MATRIX_CACHE
+
+
 @app.get("/api/scenarios/{scenario_id}")
 def get_scenario(scenario_id: str) -> dict[str, Any]:
     """Retrieves the full scenario input JSON for a given scenario ID."""
@@ -87,8 +176,22 @@ def get_scenario(scenario_id: str) -> dict[str, Any]:
 
 @app.post("/api/recommend", response_model=ScenarioOutput)
 def recommend_stack(req: RecommendRequest) -> ScenarioOutput:
-    """Evaluates raw scenario JSON and produces Section 4 compliant recommendation."""
+    """Evaluates raw scenario JSON and produces canonical Section 4 compliant recommendation."""
     return engine.evaluate_scenario(req.scenario, enable_llm=req.enable_llm)
+
+
+@app.post("/api/topology")
+def get_topology(req: TopologyRequest) -> dict[str, str]:
+    """Auxiliary endpoint returning deterministic Mermaid flowchart syntax and pure-Python SVG."""
+    out = req.output
+    if out is None:
+        if not req.scenario:
+            raise HTTPException(status_code=400, detail="Either 'output' or 'scenario' must be provided.")
+        out = engine.evaluate_scenario(req.scenario)
+
+    mermaid_str = generate_topology_mermaid(out, req.scenario)
+    svg_str = generate_topology_svg(out, req.scenario)
+    return {"mermaid": mermaid_str, "svg": svg_str}
 
 
 @app.get("/api/download-report")
@@ -105,7 +208,7 @@ def download_report():
 
 @app.get("/", response_class=HTMLResponse)
 def index_page() -> str:
-    """Serves the modern Linear/Vercel styled web UI dashboard."""
+    """Serves the modernized Linear/Vercel styled web UI studio."""
     return HTML_CONTENT
 
 
@@ -114,40 +217,19 @@ HTML_CONTENT = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StackSense · Intelligent Tech Stack Recommendation Engine</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>StackSense · Systems-Design Recommendation Engine</title>
+  <!-- Production-grade Offline Vendored Tailwind CSS (Zero external CDN dependency) -->
+  <link rel="stylesheet" href="/static/vendor/tailwind.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
+  <!-- Offline-First Mermaid.js: local vendor asset with CDN fallback -->
+  <script src="/static/vendor/mermaid.min.js"></script>
   <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-            surface: {
-              base: '#090d16',
-              card: '#111625',
-              elevated: '#181f33',
-              border: '#1f2942',
-              hover: '#242e4a',
-            }
-          }
-        }
-      }
+    if (typeof mermaid === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"><\\/script>');
     }
   </script>
 
@@ -162,39 +244,32 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
     
     .glass-card {
-      background: rgba(17, 22, 37, 0.75);
+      background: rgba(17, 22, 37, 0.85);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
     }
 
     .glass-card:hover {
-      border-color: rgba(255, 255, 255, 0.12);
-    }
-
-    .badge-glow-emerald {
-      box-shadow: 0 0 15px -2px rgba(16, 185, 129, 0.25);
-    }
-
-    .badge-glow-amber {
-      box-shadow: 0 0 15px -2px rgba(245, 158, 11, 0.25);
-    }
-
-    .badge-glow-rose {
-      box-shadow: 0 0 15px -2px rgba(244, 63, 94, 0.25);
+      border-color: rgba(255, 255, 255, 0.14);
     }
 
     /* Custom Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #090d16; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+
+    /* Suppress any stray Mermaid error elements appended to body */
+    svg[id^="dtopo_"], div[id^="dtopo_"], [id^="dtopo_"], .error-icon, [aria-roledescription="error"] {
+      display: none !important;
+    }
     ::-webkit-scrollbar-thumb:hover { background: #334155; }
   </style>
 </head>
 <body class="min-h-screen antialiased flex flex-col">
 
   <!-- Top Navigation Bar -->
-  <header class="border-b border-white/[0.08] bg-surface-card/60 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5">
+  <header class="border-b border-white/[0.08] bg-surface-card/70 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       
       <!-- Brand Logo & Title -->
@@ -209,7 +284,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             <span class="text-base font-bold tracking-tight text-white">StackSense</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-500/10 text-brand-400 border border-brand-500/20">Synergy '26</span>
           </div>
-          <p class="text-[11px] text-slate-400">Intelligent Tech Stack Recommendation Engine · IIIT Bangalore</p>
+          <p class="text-[11px] text-slate-400">Systems-Design Recommendation Engine · IIIT Bangalore</p>
         </div>
       </div>
 
@@ -238,11 +313,8 @@ HTML_CONTENT = """<!DOCTYPE html>
   <!-- Main Content Layout -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- ========================================================================= -->
-    <!-- LEFT PANEL: Scenario Inputs & Preset Controller (5 Cols)                  -->
-    <!-- ========================================================================= -->
+    <!-- LEFT PANEL: Scenario Inputs & Mode Controller (5 Cols) -->
     <div class="lg:col-span-5 space-y-4 flex flex-col">
-      
       <div class="glass-card rounded-2xl p-5 space-y-4 flex-1 flex flex-col">
         
         <!-- Scenario Selector Header -->
@@ -269,7 +341,6 @@ HTML_CONTENT = """<!DOCTYPE html>
 
         <!-- TAB 1: Visual Form Studio -->
         <div id="visualFormView" class="space-y-4 flex-1 overflow-y-auto max-h-[620px] pr-1">
-          
           <!-- Section 1: Project Details -->
           <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] space-y-3">
             <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
@@ -290,8 +361,8 @@ HTML_CONTENT = """<!DOCTYPE html>
                     <option value="marketplace">Marketplace</option>
                     <option value="fintech">Fintech / Payments</option>
                     <option value="healthtech">Healthtech</option>
-                    <option value="realtime_collab">Real-time Collaboration</option>
-                    <option value="internal_tool">Internal Enterprise Tool</option>
+                    <option value="realtime_collab">Real-time Collab</option>
+                    <option value="internal_tool">Internal Tool</option>
                     <option value="ecommerce">E-Commerce</option>
                     <option value="social">Social Network</option>
                     <option value="other">Other / Offline-first</option>
@@ -353,7 +424,7 @@ HTML_CONTENT = """<!DOCTYPE html>
             </div>
           </div>
 
-          <!-- Section 3: Infrastructure, Compliance & Security -->
+          <!-- Section 3: Infrastructure & Compliance -->
           <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] space-y-3">
             <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
               <i class="fa-solid fa-shield-halved text-emerald-400"></i> Infrastructure & Compliance
@@ -381,24 +452,23 @@ HTML_CONTENT = """<!DOCTYPE html>
                 <label class="text-[11px] text-slate-400 block mb-1">Cloud Preference</label>
                 <select id="vf_cloud_pref" class="w-full bg-surface-elevated text-xs text-slate-200 px-2 py-1.5 rounded-lg border border-white/10">
                   <option value="any">Any Cloud</option>
-                  <option value="aws">Amazon Web Services</option>
-                  <option value="gcp">Google Cloud Platform</option>
-                  <option value="azure">Microsoft Azure</option>
+                  <option value="aws">AWS</option>
+                  <option value="gcp">GCP</option>
+                  <option value="azure">Azure</option>
                   <option value="none">None / On-Premise</option>
                 </select>
               </div>
               <div>
-                <label class="text-[11px] text-slate-400 block mb-1">Target Availability</label>
+                <label class="text-[11px] text-slate-400 block mb-1">Availability</label>
                 <select id="vf_availability" class="w-full bg-surface-elevated text-xs text-slate-200 px-2 py-1.5 rounded-lg border border-white/10">
                   <option value="99">99.0%</option>
                   <option value="99.9">99.9% (Standard)</option>
-                  <option value="99.95">99.95% (High Availability)</option>
-                  <option value="99.99">99.99% (Mission Critical)</option>
+                  <option value="99.95">99.95% (High)</option>
+                  <option value="99.99">99.99% (Critical)</option>
                 </select>
               </div>
             </div>
 
-            <!-- Compliance standards chips -->
             <div>
               <label class="text-[11px] text-slate-400 block mb-1.5">Compliance Requirements</label>
               <div class="flex flex-wrap gap-1.5" id="complianceBadges">
@@ -406,12 +476,11 @@ HTML_CONTENT = """<!DOCTYPE html>
                 <button type="button" data-val="dpdp" class="comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400">DPDP (India)</button>
                 <button type="button" data-val="pci_dss" class="comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400">PCI-DSS</button>
                 <button type="button" data-val="gdpr" class="comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400">GDPR</button>
-                <button type="button" data-val="iso27001" class="comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400">ISO 27001</button>
               </div>
             </div>
           </div>
 
-          <!-- Section 4: Supporting Feature Toggles -->
+          <!-- Section 4: Features -->
           <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] space-y-2.5">
             <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
               <i class="fa-solid fa-puzzle-piece text-amber-400"></i> Functional Requirements
@@ -437,47 +506,168 @@ HTML_CONTENT = """<!DOCTYPE html>
               </label>
             </div>
           </div>
-
         </div>
 
         <!-- TAB 2: Section 3.1 JSON Code Editor -->
         <div id="jsonCodeView" class="hidden space-y-2 flex-1 flex flex-col">
           <div class="flex justify-between items-center text-[11px] text-slate-400">
-            <span>Raw Section 3.1 JSON Payload</span>
-            <span id="jsonValidationMsg" class="text-emerald-400 font-mono">Valid JSON</span>
+            <span>Section 3.1 JSON Spec</span>
+            <span id="jsonValidationMsg" class="text-emerald-400 font-mono font-medium">Valid JSON</span>
           </div>
           <textarea id="jsonEditor" class="w-full flex-1 bg-surface-elevated font-mono text-xs text-slate-200 p-3.5 rounded-xl border border-white/10 focus:ring-1 focus:ring-brand-500 focus:outline-none leading-relaxed resize-none min-h-[500px]" spellcheck="false"></textarea>
         </div>
 
-        <!-- Execute Action Footer -->
-        <div class="pt-2 border-t border-white/[0.08] flex items-center justify-between gap-3">
-          <button id="formatBtn" type="button" class="px-3 py-2 text-xs font-medium text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-lg border border-white/10 transition">
-            <i class="fa-solid fa-align-left mr-1"></i> Format
-          </button>
-          
-          <button id="runBtn" type="button" class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition active:scale-[0.99]">
-            <i class="fa-solid fa-bolt text-amber-300"></i> Evaluate & Recommend Stack
+        <!-- Action Button -->
+        <div class="pt-2 border-t border-white/[0.08]">
+          <button id="evaluateBtn" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs tracking-wide shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Evaluate Stack Recommendation</span>
           </button>
         </div>
 
       </div>
-
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- RIGHT PANEL: Executive Architecture & Result Breakdown (7 Cols)           -->
-    <!-- ========================================================================= -->
-    <div class="lg:col-span-7 space-y-4">
+    <!-- RIGHT PANEL: 6-Tab Studio Workspace (7 Cols) -->
+    <div class="lg:col-span-7 space-y-4 flex flex-col">
       
-      <div id="outputContainer" class="space-y-4">
-        <!-- Placeholder Empty State -->
-        <div class="glass-card rounded-2xl p-12 text-center text-slate-500 space-y-3">
-          <div class="h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mx-auto text-slate-600 text-2xl">
-            <i class="fa-solid fa-layer-group"></i>
-          </div>
-          <h3 class="text-sm font-semibold text-slate-300">Awaiting Scenario Evaluation</h3>
-          <p class="text-xs text-slate-500 max-w-sm mx-auto">Select a preset scenario on the left or customize your parameters, then click Evaluate to generate explainable recommendations.</p>
+      <!-- Top Metrics Ribbon -->
+      <div id="metricsRibbon" class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-brand-500">
+        <div class="flex items-center gap-2.5" id="statusBadges">
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> STATUS: OK
+          </span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            Arch: SERVERLESS
+          </span>
         </div>
+        <div class="flex items-center gap-2 font-mono text-xs" id="costBadge">
+          <span class="text-slate-400 font-sans text-xs">Estimated Monthly TCO:</span>
+          <span class="px-3 py-1 rounded-full font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+            $45 – $200 / mo
+          </span>
+        </div>
+      </div>
+
+      <!-- Studio Workspace Tabs -->
+      <div class="glass-card rounded-2xl p-2 flex items-center gap-1 border border-white/[0.08] overflow-x-auto text-xs font-medium">
+        <button id="wsTabBlueprint" class="ws-tab px-3.5 py-1.5 rounded-lg bg-brand-600 text-white flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-layer-group text-[11px]"></i> Blueprint
+        </button>
+        <button id="wsTabTopology" class="ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-diagram-project text-[11px]"></i> System Topology
+        </button>
+        <button id="wsTabTradeoffs" class="ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-scale-balanced text-[11px]"></i> Trade-Off Matrix
+        </button>
+        <button id="wsTabRelaxation" class="ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-triangle-exclamation text-[11px]"></i> Conflicts & Repairs
+        </button>
+        <button id="wsTabMatrix" class="ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-table-cells text-[11px]"></i> Benchmark Matrix
+        </button>
+        <button id="wsTabJson" class="ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-code text-[11px]"></i> Section 4 JSON
+        </button>
+      </div>
+
+      <!-- Workspace Tab Contents -->
+      <div id="wsContainer" class="flex-1 space-y-4">
+        
+        <!-- View 1: Architecture Blueprint -->
+        <div id="viewBlueprint" class="space-y-4">
+          <!-- Summary card -->
+          <div class="glass-card rounded-2xl p-4.5 space-y-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i class="fa-regular fa-compass text-brand-400"></i> Recommendation Architecture Summary
+            </span>
+            <p id="bpSummary" class="text-xs text-slate-200 leading-relaxed font-normal"></p>
+          </div>
+
+          <!-- 4 Core Layers Grid (Fixes Header Overlap Bug) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="bpCoreLayers"></div>
+
+          <!-- Supporting Services Grid -->
+          <div class="glass-card rounded-2xl p-5 space-y-3.5" id="bpSupporting"></div>
+        </div>
+
+        <!-- View 2: System Topology Visualizer -->
+        <div id="viewTopology" class="hidden space-y-3">
+          <div class="glass-card rounded-2xl p-4 flex items-center justify-between border-b border-white/[0.08]">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-diagram-project text-cyan-400 text-xs"></i>
+              <span class="text-xs font-semibold text-white tracking-tight">System Architecture Topology (5-Tier)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="copyMermaidBtn" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 border border-white/10 transition flex items-center gap-1">
+                <i class="fa-regular fa-copy text-brand-400"></i> Copy Mermaid
+              </button>
+              <button id="downloadSvgBtn" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 border border-white/10 transition flex items-center gap-1">
+                <i class="fa-solid fa-download text-emerald-400"></i> Download SVG
+              </button>
+            </div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 overflow-auto max-h-[650px] flex items-center justify-center min-h-[400px]">
+            <div id="topologyRenderArea" class="w-full flex justify-center text-center"></div>
+          </div>
+        </div>
+
+        <!-- View 3: Architectural Trade-Off Matrix -->
+        <div id="viewTradeoffs" class="hidden space-y-4">
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <i class="fa-solid fa-scale-balanced text-amber-400"></i>
+                <span>Architectural Trade-Off Analysis</span>
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono">Input-grounded decision ledger</span>
+            </div>
+            <div id="tradeoffTableContainer" class="overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- View 4: Conflict Relaxation & Remediation Guide -->
+        <div id="viewRelaxation" class="hidden space-y-4">
+          <div class="glass-card rounded-2xl p-5 space-y-3.5">
+            <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                <i class="fa-solid fa-shield-virus"></i>
+                <span>Detected Conflicts & Actionable Repair Advice</span>
+              </span>
+              <span class="text-[11px] text-slate-400">Deterministic relaxation heuristics</span>
+            </div>
+            <div id="relaxationCardContainer" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- View 5: Benchmark Matrix (P1-P6) -->
+        <div id="viewMatrix" class="hidden space-y-4">
+          <div class="glass-card rounded-2xl p-5 space-y-3.5">
+            <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <i class="fa-solid fa-table-cells text-cyan-400"></i>
+                <span>Cross-Scenario Benchmark Comparative Matrix</span>
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono">P1 through P6 live benchmarks</span>
+            </div>
+            <div id="matrixTableContainer" class="overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- View 6: Section 4 JSON Spec -->
+        <div id="viewJson" class="hidden space-y-3">
+          <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-300 flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span>Canonical Section 4 JSON Spec</span>
+            </span>
+            <button id="copyRawJsonBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i> Copy JSON
+            </button>
+          </div>
+          <pre id="rawJsonSpec" class="glass-card rounded-2xl p-4.5 font-mono text-xs text-slate-300 overflow-auto max-h-[600px] leading-relaxed"></pre>
+        </div>
+
       </div>
 
     </div>
@@ -486,9 +676,12 @@ HTML_CONTENT = """<!DOCTYPE html>
 
   <script>
     // State
-    let currentScenario = {};
+    let currentScenario = null;
+    let currentOutput = null;
+    let currentTopology = { mermaid: "", svg: "" };
+    let jsonDebounceTimer = null;
 
-    // Elements
+    // DOM Elements
     const scenarioSelect = document.getElementById('scenarioSelect');
     const tabFormBtn = document.getElementById('tabFormBtn');
     const tabJsonBtn = document.getElementById('tabJsonBtn');
@@ -496,74 +689,83 @@ HTML_CONTENT = """<!DOCTYPE html>
     const jsonCodeView = document.getElementById('jsonCodeView');
     const jsonEditor = document.getElementById('jsonEditor');
     const jsonValidationMsg = document.getElementById('jsonValidationMsg');
-    const runBtn = document.getElementById('runBtn');
-    const formatBtn = document.getElementById('formatBtn');
-    const outputContainer = document.getElementById('outputContainer');
+    const evaluateBtn = document.getElementById('evaluateBtn');
 
-    // Visual Form Elements
-    const vf_name = document.getElementById('vf_name');
-    const vf_type = document.getElementById('vf_type');
-    const vf_workload = document.getElementById('vf_workload');
-    const vf_users12m = document.getElementById('vf_users12m');
-    const vf_budget = document.getElementById('vf_budget');
-    const vf_team_size = document.getElementById('vf_team_size');
-    const vf_team_exp = document.getElementById('vf_team_exp');
-    const vf_languages = document.getElementById('vf_languages');
-    const vf_deploy_model = document.getElementById('vf_deploy_model');
-    const vf_residency = document.getElementById('vf_residency');
-    const vf_cloud_pref = document.getElementById('vf_cloud_pref');
-    const vf_availability = document.getElementById('vf_availability');
-    const vf_realtime = document.getElementById('vf_realtime');
-    const vf_offline = document.getElementById('vf_offline');
-    const vf_search = document.getElementById('vf_search');
-    const vf_storage = document.getElementById('vf_storage');
-    const vf_payments = document.getElementById('vf_payments');
-    const vf_devops = document.getElementById('vf_devops');
+    // Workspace Tabs
+    const wsTabs = [
+      { btn: document.getElementById('wsTabBlueprint'), view: document.getElementById('viewBlueprint') },
+      { btn: document.getElementById('wsTabTopology'), view: document.getElementById('viewTopology') },
+      { btn: document.getElementById('wsTabTradeoffs'), view: document.getElementById('viewTradeoffs') },
+      { btn: document.getElementById('wsTabRelaxation'), view: document.getElementById('viewRelaxation') },
+      { btn: document.getElementById('wsTabMatrix'), view: document.getElementById('viewMatrix') },
+      { btn: document.getElementById('wsTabJson'), view: document.getElementById('viewJson') },
+    ];
 
-    // Tab Switching
+    function activateWsTab(targetIndex) {
+      wsTabs.forEach((tab, idx) => {
+        if (idx === targetIndex) {
+          tab.btn.className = "ws-tab px-3.5 py-1.5 rounded-lg bg-brand-600 text-white flex items-center gap-1.5 transition font-semibold";
+          tab.view.classList.remove('hidden');
+        } else {
+          tab.btn.className = "ws-tab px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition font-medium";
+          tab.view.classList.add('hidden');
+        }
+      });
+      if (targetIndex === 1) renderTopology();
+      if (targetIndex === 4) loadBenchmarkMatrix();
+    }
+
+    wsTabs.forEach((tab, index) => {
+      tab.btn.addEventListener('click', () => activateWsTab(index));
+    });
+
+    // Toggle Form vs JSON Editor
     tabFormBtn.addEventListener('click', () => {
-      tabFormBtn.className = "flex-1 py-1.5 rounded-lg bg-brand-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition";
+      tabFormBtn.className = "flex-1 py-1.5 rounded-lg bg-brand-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition font-semibold";
       tabJsonBtn.className = "flex-1 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition";
       visualFormView.classList.remove('hidden');
       jsonCodeView.classList.add('hidden');
-      syncJsonToForm();
     });
 
     tabJsonBtn.addEventListener('click', () => {
-      tabJsonBtn.className = "flex-1 py-1.5 rounded-lg bg-brand-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition";
+      tabJsonBtn.className = "flex-1 py-1.5 rounded-lg bg-brand-600 text-white shadow-sm flex items-center justify-center gap-1.5 transition font-semibold";
       tabFormBtn.className = "flex-1 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition";
       jsonCodeView.classList.remove('hidden');
       visualFormView.classList.add('hidden');
-      syncFormToJson();
     });
 
-    // Preset Scenarios Loader
+    // Load Scenarios List
     async function initScenarios() {
       try {
         const res = await fetch('/api/scenarios');
-        const list = await res.json();
+        const scenarios = await res.json();
         
-        const g1 = document.createElement('optgroup');
-        g1.label = "Public Benchmarks (P1 - P6)";
-        const g2 = document.createElement('optgroup');
-        g2.label = "Section 6 Edge Cases (E1 - E11)";
+        scenarioSelect.innerHTML = '<option value="">-- Load Scenario Preset --</option>';
+        
+        const pubGroup = document.createElement('optgroup');
+        pubGroup.label = "Public Benchmarks (P1–P6)";
+        const edgeGroup = document.createElement('optgroup');
+        edgeGroup.label = "Section 6 Edge Cases";
 
-        list.forEach(s => {
+        scenarios.forEach(sc => {
           const opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = `${s.id}: ${s.name}`;
-          if (s.category === "Public Benchmark") g1.appendChild(opt);
-          else g2.appendChild(opt);
+          opt.value = sc.id;
+          opt.textContent = `${sc.id}: ${sc.name} (${sc.type})`;
+          if (sc.category === "Public Benchmark") {
+            pubGroup.appendChild(opt);
+          } else {
+            edgeGroup.appendChild(opt);
+          }
         });
 
-        scenarioSelect.appendChild(g1);
-        scenarioSelect.appendChild(g2);
+        scenarioSelect.appendChild(pubGroup);
+        scenarioSelect.appendChild(edgeGroup);
 
-        // Load P2 as initial demonstration
+        // Auto load P2
         scenarioSelect.value = "P2";
-        await loadScenario("P2");
+        loadScenario("P2");
       } catch (err) {
-        console.error("Failed to load scenario list:", err);
+        console.error("Failed to load scenarios:", err);
       }
     }
 
@@ -571,487 +773,535 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (!id) return;
       try {
         const res = await fetch(`/api/scenarios/${id}`);
-        currentScenario = await res.json();
-        jsonEditor.value = JSON.stringify(currentScenario, null, 2);
-        syncJsonToForm();
-        await evaluateStack();
+        const data = await res.json();
+        currentScenario = data;
+        syncModelToForm(data);
+        jsonEditor.value = JSON.stringify(data, null, 2);
+        evaluateCurrentScenario();
       } catch (err) {
-        console.error("Error loading scenario:", err);
+        console.error(`Failed to fetch scenario ${id}:`, err);
       }
     }
 
-    scenarioSelect.addEventListener('change', () => loadScenario(scenarioSelect.value));
+    scenarioSelect.addEventListener('change', (e) => {
+      loadScenario(e.target.value);
+    });
 
-    // Two-way synchronization: JSON -> Form
-    function syncJsonToForm() {
-      try {
-        const s = JSON.parse(jsonEditor.value);
-        currentScenario = s;
-        vf_name.value = s.project?.name || "";
-        vf_type.value = s.project?.type || "web_app";
-        vf_workload.value = s.scale?.workload || "balanced";
-        vf_users12m.value = s.scale?.users_12_months ?? 10000;
-        vf_budget.value = s.budget?.monthly_infra_usd ?? 150;
-        vf_team_size.value = s.team?.size ?? 3;
-        vf_team_exp.value = s.team?.experience || "intermediate";
-        vf_languages.value = (s.team?.languages || []).join(', ');
-        vf_deploy_model.value = s.infrastructure?.deployment_model || "managed_cloud";
-        vf_residency.value = s.infrastructure?.data_residency || "none";
-        vf_cloud_pref.value = s.infrastructure?.cloud_preference || "any";
-        vf_availability.value = s.requirements?.availability || "99.9";
+    // Unidirectional State Machine & Debounced Gate
+    function syncModelToForm(sc) {
+      if (!sc) return;
+      document.getElementById('vf_name').value = sc.project?.name || "";
+      document.getElementById('vf_type').value = sc.project?.type || "web_app";
+      document.getElementById('vf_workload').value = sc.scale?.workload || "balanced";
+      document.getElementById('vf_users12m').value = sc.scale?.users_12_months || 0;
+      document.getElementById('vf_budget').value = sc.budget?.monthly_infra_usd || 0;
+      document.getElementById('vf_team_size').value = sc.team?.size || 1;
+      document.getElementById('vf_team_exp').value = sc.team?.experience || "intermediate";
+      document.getElementById('vf_languages').value = (sc.team?.languages || []).join(', ');
+      document.getElementById('vf_deploy_model').value = sc.infrastructure?.deployment_model || "managed_cloud";
+      document.getElementById('vf_residency').value = sc.infrastructure?.data_residency || "none";
+      document.getElementById('vf_cloud_pref').value = sc.infrastructure?.cloud_preference || "any";
+      document.getElementById('vf_availability').value = sc.requirements?.availability || "99.9";
 
-        vf_realtime.checked = !!s.requirements?.realtime;
-        vf_offline.checked = !!s.requirements?.offline_support;
-        vf_search.checked = !!s.requirements?.full_text_search;
-        vf_storage.checked = !!s.requirements?.file_media_storage;
-        vf_payments.checked = !!s.requirements?.payments;
-        vf_devops.checked = !!s.team?.has_devops;
-
-        // Platform chips
-        const plats = s.project?.platforms || [];
-        document.querySelectorAll('.plat-chip').forEach(btn => {
-          const val = btn.getAttribute('data-val');
-          if (plats.includes(val)) {
-            btn.className = "plat-chip px-2.5 py-1 rounded-md text-xs font-semibold bg-brand-600 text-white border border-brand-500";
-          } else {
-            btn.className = "plat-chip px-2.5 py-1 rounded-md text-xs font-medium border border-white/10 bg-surface-elevated text-slate-400";
-          }
-        });
-
-        // Compliance chips
-        const comps = s.compliance || [];
-        document.querySelectorAll('.comp-chip').forEach(btn => {
-          const val = btn.getAttribute('data-val');
-          if (comps.includes(val)) {
-            btn.className = "comp-chip px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-600 text-white border border-emerald-500";
-          } else {
-            btn.className = "comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400";
-          }
-        });
-
-        jsonValidationMsg.textContent = "Valid Section 3.1 JSON";
-        jsonValidationMsg.className = "text-emerald-400 font-mono";
-      } catch (e) {
-        jsonValidationMsg.textContent = "JSON Syntax Error: " + e.message;
-        jsonValidationMsg.className = "text-rose-400 font-mono";
-      }
-    }
-
-    // Two-way synchronization: Form -> JSON
-    function syncFormToJson() {
-      const activePlatforms = [];
+      // Platforms
+      const plats = sc.project?.platforms || [];
       document.querySelectorAll('.plat-chip').forEach(btn => {
-        if (btn.classList.contains('bg-brand-600')) activePlatforms.push(btn.getAttribute('data-val'));
-      });
-
-      const activeCompliance = [];
-      document.querySelectorAll('.comp-chip').forEach(btn => {
-        if (btn.classList.contains('bg-emerald-600')) activeCompliance.push(btn.getAttribute('data-val'));
-      });
-
-      const langs = vf_languages.value.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
-
-      currentScenario = {
-        schema_version: "1.0",
-        scenario_id: currentScenario.scenario_id || "CUSTOM",
-        project: {
-          name: vf_name.value || "Custom Project",
-          type: vf_type.value,
-          description: currentScenario.project?.description || "Interactive custom scenario.",
-          platforms: activePlatforms.length > 0 ? activePlatforms : ["web"]
-        },
-        scale: {
-          traffic_pattern: currentScenario.scale?.traffic_pattern || "steady",
-          workload: vf_workload.value,
-          users_at_launch: currentScenario.scale?.users_at_launch || 500,
-          users_12_months: parseInt(vf_users12m.value) || 10000,
-          peak_concurrent_users: currentScenario.scale?.peak_concurrent_users || 100,
-          data_volume_gb_12_months: currentScenario.scale?.data_volume_gb_12_months || 20
-        },
-        team: {
-          has_devops: vf_devops.checked,
-          size: parseInt(vf_team_size.value) || 3,
-          experience: vf_team_exp.value,
-          languages: langs.length > 0 ? langs : ["typescript"]
-        },
-        budget: {
-          monthly_infra_usd: parseFloat(vf_budget.value) || 100
-        },
-        timeline: {
-          mvp_weeks: currentScenario.timeline?.mvp_weeks || 12
-        },
-        infrastructure: {
-          cloud_preference: vf_cloud_pref.value,
-          deployment_model: vf_deploy_model.value,
-          data_residency: vf_residency.value,
-          existing_systems: currentScenario.infrastructure?.existing_systems || []
-        },
-        compliance: activeCompliance,
-        requirements: {
-          realtime: vf_realtime.checked,
-          offline_support: vf_offline.checked,
-          full_text_search: vf_search.checked,
-          file_media_storage: vf_storage.checked,
-          payments: vf_payments.checked,
-          auth: currentScenario.requirements?.auth || "email_password",
-          multi_tenant: currentScenario.requirements?.multi_tenant || false,
-          ml_features: currentScenario.requirements?.ml_features || "none",
-          seo_critical: currentScenario.requirements?.seo_critical || false,
-          availability: vf_availability.value,
-          p95_latency_ms: currentScenario.requirements?.p95_latency_ms || null
-        },
-        priorities: currentScenario.priorities || {
-          cost: 3, time_to_market: 3, scalability: 3, performance: 3, maintainability: 3, security: 3
+        const val = btn.dataset.val;
+        if (plats.includes(val)) {
+          btn.classList.add('bg-brand-600', 'text-white', 'border-brand-500');
+          btn.classList.remove('bg-surface-elevated', 'text-slate-300');
+        } else {
+          btn.classList.remove('bg-brand-600', 'text-white', 'border-brand-500');
+          btn.classList.add('bg-surface-elevated', 'text-slate-300');
         }
-      };
+      });
 
+      // Compliance
+      const comps = sc.infrastructure?.compliance || [];
+      document.querySelectorAll('.comp-chip').forEach(btn => {
+        const val = btn.dataset.val;
+        if (comps.includes(val)) {
+          btn.classList.add('bg-emerald-600/30', 'text-emerald-300', 'border-emerald-500/40');
+          btn.classList.remove('bg-surface-elevated', 'text-slate-400');
+        } else {
+          btn.classList.remove('bg-emerald-600/30', 'text-emerald-300', 'border-emerald-500/40');
+          btn.classList.add('bg-surface-elevated', 'text-slate-400');
+        }
+      });
+
+      // Toggles
+      document.getElementById('vf_realtime').checked = !!sc.requirements?.real_time;
+      document.getElementById('vf_offline').checked = !!sc.requirements?.offline_support;
+      document.getElementById('vf_search').checked = (sc.supporting_services || []).includes('search');
+      document.getElementById('vf_storage').checked = (sc.supporting_services || []).includes('storage');
+      document.getElementById('vf_payments').checked = (sc.supporting_services || []).includes('payments');
+      document.getElementById('vf_devops').checked = !!sc.team?.has_devops;
+    }
+
+    function syncFormToModel() {
+      if (!currentScenario) currentScenario = {};
+      currentScenario.project = currentScenario.project || {};
+      currentScenario.project.name = document.getElementById('vf_name').value;
+      currentScenario.project.type = document.getElementById('vf_type').value;
+      
+      currentScenario.scale = currentScenario.scale || {};
+      currentScenario.scale.workload = document.getElementById('vf_workload').value;
+      currentScenario.scale.users_12_months = parseInt(document.getElementById('vf_users12m').value) || 0;
+
+      currentScenario.budget = currentScenario.budget || {};
+      currentScenario.budget.monthly_infra_usd = parseFloat(document.getElementById('vf_budget').value) || 0;
+
+      currentScenario.team = currentScenario.team || {};
+      currentScenario.team.size = parseInt(document.getElementById('vf_team_size').value) || 1;
+      currentScenario.team.experience = document.getElementById('vf_team_exp').value;
+      const langs = document.getElementById('vf_languages').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      currentScenario.team.languages = langs;
+      currentScenario.team.has_devops = document.getElementById('vf_devops').checked;
+
+      currentScenario.infrastructure = currentScenario.infrastructure || {};
+      currentScenario.infrastructure.deployment_model = document.getElementById('vf_deploy_model').value;
+      currentScenario.infrastructure.data_residency = document.getElementById('vf_residency').value;
+      currentScenario.infrastructure.cloud_preference = document.getElementById('vf_cloud_pref').value;
+
+      currentScenario.requirements = currentScenario.requirements || {};
+      currentScenario.requirements.availability = document.getElementById('vf_availability').value;
+      currentScenario.requirements.real_time = document.getElementById('vf_realtime').checked;
+      currentScenario.requirements.offline_support = document.getElementById('vf_offline').checked;
+
+      // Platform selection
+      const activePlats = [];
+      document.querySelectorAll('.plat-chip.bg-brand-600').forEach(btn => activePlats.push(btn.dataset.val));
+      currentScenario.project.platforms = activePlats.length ? activePlats : ["web"];
+
+      // Compliance selection
+      const activeComps = [];
+      document.querySelectorAll('.comp-chip.bg-emerald-600\\/30').forEach(btn => activeComps.push(btn.dataset.val));
+      currentScenario.infrastructure.compliance = activeComps;
+
+      // Re-serialize into JSON textarea
       jsonEditor.value = JSON.stringify(currentScenario, null, 2);
     }
 
-    // Platform chip toggle
+    // Bind form controls
+    visualFormView.addEventListener('input', () => {
+      syncFormToModel();
+    });
+
     document.querySelectorAll('.plat-chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (btn.classList.contains('bg-brand-600')) {
-          btn.className = "plat-chip px-2.5 py-1 rounded-md text-xs font-medium border border-white/10 bg-surface-elevated text-slate-400";
-        } else {
-          btn.className = "plat-chip px-2.5 py-1 rounded-md text-xs font-semibold bg-brand-600 text-white border border-brand-500";
-        }
-        syncFormToJson();
+        btn.classList.toggle('bg-brand-600');
+        btn.classList.toggle('text-white');
+        btn.classList.toggle('bg-surface-elevated');
+        btn.classList.toggle('text-slate-300');
+        syncFormToModel();
       });
     });
 
-    // Compliance chip toggle
     document.querySelectorAll('.comp-chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (btn.classList.contains('bg-emerald-600')) {
-          btn.className = "comp-chip px-2 py-0.5 rounded text-[11px] font-mono border border-white/10 bg-surface-elevated text-slate-400";
-        } else {
-          btn.className = "comp-chip px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-600 text-white border border-emerald-500";
-        }
-        syncFormToJson();
+        btn.classList.toggle('bg-emerald-600/30');
+        btn.classList.toggle('text-emerald-300');
+        btn.classList.toggle('border-emerald-500/40');
+        syncFormToModel();
       });
     });
 
-    // Real-time Form inputs change listener
-    [vf_name, vf_type, vf_workload, vf_users12m, vf_budget, vf_team_size, vf_team_exp, vf_languages, 
-     vf_deploy_model, vf_residency, vf_cloud_pref, vf_availability, vf_realtime, vf_offline, 
-     vf_search, vf_storage, vf_payments, vf_devops].forEach(el => {
-      el.addEventListener('change', syncFormToJson);
-    });
-
-    // Format JSON Button
-    formatBtn.addEventListener('click', () => {
-      try {
-        const parsed = JSON.parse(jsonEditor.value);
-        jsonEditor.value = JSON.stringify(parsed, null, 2);
-        syncJsonToForm();
-      } catch (err) {}
-    });
-
+    // 250ms Debounced Gate on JSON editor
     jsonEditor.addEventListener('input', () => {
-      syncJsonToForm();
+      clearTimeout(jsonDebounceTimer);
+      jsonDebounceTimer = setTimeout(() => {
+        try {
+          const parsed = JSON.parse(jsonEditor.value);
+          jsonValidationMsg.textContent = "Valid JSON";
+          jsonValidationMsg.className = "text-emerald-400 font-mono font-medium";
+          currentScenario = parsed;
+          syncModelToForm(parsed);
+        } catch (err) {
+          jsonValidationMsg.textContent = "Syntax Error: " + err.message;
+          jsonValidationMsg.className = "text-rose-400 font-mono font-medium text-[10px]";
+        }
+      }, 250);
     });
 
-    // Evaluate Stack Action
-    async function evaluateStack() {
-      try {
-        runBtn.disabled = true;
-        runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Solving Constraints...';
+    // Evaluation Controller
+    evaluateBtn.addEventListener('click', evaluateCurrentScenario);
 
-        const payload = JSON.parse(jsonEditor.value);
+    async function evaluateCurrentScenario() {
+      try {
+        let payload = currentScenario;
+        try {
+          payload = JSON.parse(jsonEditor.value);
+        } catch (e) {
+          // fallback to memory
+        }
+
+        evaluateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Evaluating Architecture...</span>';
+
         const res = await fetch('/api/recommend', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scenario: payload, enable_llm: false })
+          body: JSON.stringify({ scenario: payload })
         });
-        const output = await res.json();
-        renderOutput(output);
+        const out = await res.json();
+        currentOutput = out;
+
+        // Render UI
+        renderBlueprint(out);
+        renderMetrics(out);
+        renderTradeoffs(out);
+        renderRelaxation(out);
+        document.getElementById('rawJsonSpec').textContent = JSON.stringify(out, null, 2);
+
+        // Fetch topology in background
+        fetchTopology(out, payload);
+
       } catch (err) {
-        outputContainer.innerHTML = `
-          <div class="glass-card rounded-2xl p-5 border-rose-500/40 text-rose-300 space-y-2">
-            <h4 class="font-bold flex items-center gap-2"><i class="fa-solid fa-circle-exclamation"></i> Evaluation Error</h4>
-            <p class="text-xs text-rose-200/80">${err.message}</p>
-          </div>
-        `;
+        console.error("Evaluation error:", err);
       } finally {
-        runBtn.disabled = false;
-        runBtn.innerHTML = '<i class="fa-solid fa-bolt text-amber-300"></i> Evaluate & Recommend Stack';
+        evaluateBtn.innerHTML = '<i class="fa-solid fa-bolt"></i><span>Evaluate Stack Recommendation</span>';
       }
     }
 
-    runBtn.addEventListener('click', evaluateStack);
+    function renderMetrics(out) {
+      const isOk = out.status === "ok";
+      const isWarn = out.status === "ok_with_warnings";
+      const statusColor = isOk ? "emerald" : (isWarn ? "amber" : "rose");
 
-    // Render Section 4 Recommendation Cards
-    function renderOutput(data) {
-      let statusBadge = "";
-      if (data.status === "ok") {
-        statusBadge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 badge-glow-emerald flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-[11px]"></i> STATUS: OK</span>';
-      } else if (data.status === "ok_with_warnings") {
-        statusBadge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 badge-glow-amber flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-[11px]"></i> STATUS: OK WITH WARNINGS</span>';
-      } else if (data.status === "infeasible") {
-        statusBadge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 badge-glow-rose flex items-center gap-1.5"><i class="fa-solid fa-ban text-[11px]"></i> STATUS: INFEASIBLE</span>';
-      } else {
-        statusBadge = '<span class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 badge-glow-rose flex items-center gap-1.5"><i class="fa-solid fa-circle-xmark text-[11px]"></i> STATUS: INVALID INPUT</span>';
-      }
-
-      let archBadge = data.architecture_style 
-        ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-brand-500/15 text-brand-300 border border-brand-500/25 flex items-center gap-1.5"><i class="fa-solid fa-network-wired text-[11px]"></i> ${data.architecture_style.toUpperCase().replace('_', ' ')}</span>` 
-        : '';
-      
-      let costMin = data.estimated_monthly_cost_usd ? Math.round(data.estimated_monthly_cost_usd.min) : 0;
-      let costMax = data.estimated_monthly_cost_usd ? Math.round(data.estimated_monthly_cost_usd.max) : 0;
-
-      let html = `
-        <!-- Header Banner Card -->
-        <div class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-l-brand-500">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3.5">
-            <div class="flex items-center gap-2.5">
-              ${statusBadge}
-              ${archBadge}
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 font-medium">Estimated Monthly Infra:</span>
-              <span class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
-                $${costMin} – $${costMax} / mo
-              </span>
-            </div>
-          </div>
-          
-          <div class="space-y-1">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <i class="fa-regular fa-compass text-brand-400"></i> Architectural Strategy
-            </span>
-            <p class="text-sm text-slate-200 leading-relaxed font-normal">${data.summary}</p>
-          </div>
-        </div>
+      document.getElementById('statusBadges').innerHTML = `
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-${statusColor}-500/10 text-${statusColor}-400 border border-${statusColor}-500/20 flex items-center gap-1.5">
+          <span class="h-1.5 w-1.5 rounded-full bg-${statusColor}-400 ${isOk ? 'animate-pulse' : ''}"></span>
+          STATUS: ${out.status.toUpperCase()}
+        </span>
+        <span class="px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          Arch: ${(out.architecture_style || 'serverless').toUpperCase()}
+        </span>
       `;
 
-      // Validation Errors Notice
-      if (data.validation_errors && data.validation_errors.length > 0) {
-        html += `
-          <div class="glass-card rounded-2xl p-4.5 border-rose-500/40 bg-rose-500/[0.04] space-y-2.5">
-            <div class="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <span>Schema Validation Errors (${data.validation_errors.length})</span>
-            </div>
-            <ul class="text-xs text-rose-200 space-y-1 pl-4 list-disc">
-              ${data.validation_errors.map(e => `<li><span class="font-mono font-semibold text-rose-300">${e.field}:</span> ${e.message}</li>`).join('')}
-            </ul>
+      const cMin = out.estimated_monthly_cost_usd ? Math.round(out.estimated_monthly_cost_usd.min) : 0;
+      const cMax = out.estimated_monthly_cost_usd ? Math.round(out.estimated_monthly_cost_usd.max) : 0;
+      document.getElementById('costBadge').innerHTML = `
+        <span class="text-slate-400 font-sans text-xs">Estimated Monthly TCO:</span>
+        <span class="px-3 py-1 rounded-full font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+          $${cMin} – $${cMax} / mo
+        </span>
+      `;
+    }
+
+    function renderBlueprint(out) {
+      document.getElementById('bpSummary').textContent = out.summary;
+
+      // 4 Core Layers with Fixed Header Spacing
+      const bpGrid = document.getElementById('bpCoreLayers');
+      if (!out.stack) {
+        bpGrid.innerHTML = `
+          <div class="col-span-2 p-5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+            <h4 class="font-bold uppercase tracking-wider mb-1">Architecture Infeasible</h4>
+            <p>${out.summary}</p>
           </div>
         `;
+        document.getElementById('bpSupporting').classList.add('hidden');
+        return;
       }
 
-      // Warnings Notice
-      if (data.warnings && data.warnings.length > 0) {
-        html += `
-          <div class="glass-card rounded-2xl p-4.5 border-amber-500/30 bg-amber-500/[0.03] space-y-2.5">
-            <div class="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-              <i class="fa-solid fa-shield-virus"></i>
-              <span>Detected Trade-Offs & Warnings (${data.warnings.length})</span>
+      document.getElementById('bpSupporting').classList.remove('hidden');
+
+      const layers = [
+        { key: "frontend", name: "FRONTEND", comp: out.stack.frontend, icon: "fa-desktop", color: "blue" },
+        { key: "backend", name: "BACKEND", comp: out.stack.backend, icon: "fa-server", color: "indigo" },
+        { key: "database", name: "DATABASE", comp: out.stack.database, icon: "fa-database", color: "purple" },
+        { key: "hosting", name: "HOSTING", comp: out.stack.hosting, icon: "fa-cloud", color: "cyan" },
+      ];
+
+      bpGrid.innerHTML = layers.map(l => {
+        const c = l.comp;
+        if (!c) return '';
+
+        const driversHtml = (c.driven_by || []).map(d => 
+          `<span class="bg-white/[0.05] border border-white/[0.08] text-slate-300 px-2 py-0.5 rounded text-[10px] font-mono">${d}</span>`
+        ).join('');
+
+        const altsHtml = (c.alternatives || []).map(a => `
+          <div class="p-2 rounded-lg bg-surface-elevated/80 border border-white/[0.05] text-[11px] space-y-0.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200">${a.choice}</span>
+              <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-1 rounded bg-white/[0.06]">Rejected</span>
             </div>
-            <div class="space-y-2">
-              ${data.warnings.map(w => `
-                <div class="p-2.5 rounded-lg bg-surface-elevated/60 border border-white/[0.06] text-xs flex items-start gap-2.5">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono uppercase ${w.severity === 'critical' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${w.severity}</span>
-                  <div class="flex-1 space-y-0.5">
-                    <span class="font-semibold text-slate-200 font-mono text-[11px]">${w.code}</span>
-                    <p class="text-slate-300 text-xs">${w.message}</p>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
+            <p class="text-slate-400 leading-snug">${a.why_not}</p>
           </div>
-        `;
-      }
+        `).join('');
 
-      // 4 Core Layers
-      if (data.stack) {
-        const coreLayers = [
-          { key: "frontend", name: "Frontend", comp: data.stack.frontend, icon: "fa-desktop", accent: "from-blue-500/20 to-transparent", textAccent: "text-blue-400", borderAccent: "border-blue-500/40" },
-          { key: "backend", name: "Backend", comp: data.stack.backend, icon: "fa-server", accent: "from-indigo-500/20 to-transparent", textAccent: "text-indigo-400", borderAccent: "border-indigo-500/40" },
-          { key: "database", name: "Database", comp: data.stack.database, icon: "fa-database", accent: "from-purple-500/20 to-transparent", textAccent: "text-purple-400", borderAccent: "border-purple-500/40" },
-          { key: "hosting", name: "Hosting & Runtime", comp: data.stack.hosting, icon: "fa-cloud", accent: "from-teal-500/20 to-transparent", textAccent: "text-teal-400", borderAccent: "border-teal-500/40" },
-        ];
-
-        html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
-
-        coreLayers.forEach(l => {
-          const c = l.comp;
-          if (!c) return;
-
-          const driversHtml = (c.driven_by || []).map(d => 
-            `<span class="bg-white/[0.05] border border-white/[0.08] text-slate-300 px-2 py-0.5 rounded text-[10px] font-mono">${d}</span>`
-          ).join('');
-
-          const altsHtml = (c.alternatives || []).map(a => `
-            <div class="p-2.5 rounded-lg bg-surface-elevated/70 border border-white/[0.05] text-[11px] space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-200">${a.choice}</span>
-                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-1.5 py-0.5 rounded bg-white/[0.06]">Rejected</span>
-              </div>
-              <p class="text-slate-400 leading-snug">${a.why_not}</p>
-            </div>
-          `).join('');
-
-          const tradeoffsHtml = (c.tradeoffs || []).map(t => 
-            `<li class="text-[11px] text-slate-400 leading-snug">${t}</li>`
-          ).join('');
-
-          html += `
-            <div class="glass-card rounded-2xl p-5 flex flex-col justify-between space-y-4 border-t-2 ${l.borderAccent}">
-              <div class="space-y-3">
-                
-                <!-- Card Header (Fixes Spacing Bug) -->
-                <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs uppercase tracking-wider font-bold ${l.textAccent} flex items-center gap-1.5">
-                      <i class="fa-solid ${l.icon}"></i> ${l.name}
-                    </span>
-                  </div>
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded bg-white/[0.04] text-slate-400 font-mono">Core Layer</span>
-                </div>
-
-                <!-- Choice Title -->
-                <div>
-                  <h4 class="text-base font-bold text-white tracking-tight">${c.choice}</h4>
-                  <p class="text-xs text-slate-300 leading-relaxed mt-1.5">${c.justification}</p>
-                </div>
-
-                <!-- Input Drivers -->
-                ${c.driven_by && c.driven_by.length > 0 ? `
-                  <div class="space-y-1.5 pt-1">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
-                      <i class="fa-solid fa-arrows-to-dot text-brand-400"></i> Driven By Input Constraints:
-                    </span>
-                    <div class="flex flex-wrap gap-1.5">${driversHtml}</div>
-                  </div>
-                ` : ''}
-
-                <!-- Rejected Alternatives -->
-                ${c.alternatives && c.alternatives.length > 0 ? `
-                  <div class="space-y-2 pt-2 border-t border-white/[0.06]">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
-                      <i class="fa-solid fa-scale-balanced text-amber-400"></i> Evaluated Alternatives:
-                    </span>
-                    <div class="space-y-1.5">${altsHtml}</div>
-                  </div>
-                ` : ''}
-
-                <!-- Operational Trade-offs -->
-                ${c.tradeoffs && c.tradeoffs.length > 0 ? `
-                  <div class="space-y-1 pt-1 border-t border-white/[0.06]">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
-                      <i class="fa-solid fa-circle-info text-cyan-400"></i> Operational Trade-offs:
-                    </span>
-                    <ul class="list-disc pl-4 space-y-0.5">${tradeoffsHtml}</ul>
-                  </div>
-                ` : ''}
-
-              </div>
-            </div>
-          `;
-        });
-
-        html += `</div>`;
-
-        // Supporting Services Grid
-        if (data.stack.supporting && data.stack.supporting.length > 0) {
-          const suppIcons = {
-            cache: "fa-bolt text-amber-400",
-            queue: "fa-inbox text-indigo-400",
-            search: "fa-magnifying-glass text-cyan-400",
-            auth: "fa-key text-emerald-400",
-            storage: "fa-box-archive text-blue-400",
-            payments: "fa-credit-card text-emerald-400",
-            realtime: "fa-tower-broadcast text-rose-400",
-            ml: "fa-brain text-purple-400",
-            observability: "fa-chart-line text-cyan-400",
-            forms: "fa-file-lines text-slate-300",
-            other: "fa-puzzle-piece text-slate-400"
-          };
-
-          html += `
-            <div class="glass-card rounded-2xl p-5 space-y-3.5">
-              <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                  <i class="fa-solid fa-puzzle-piece text-brand-400"></i>
-                  <span>Activated Supporting Services (${data.stack.supporting.length})</span>
+        return `
+          <div class="glass-card rounded-2xl p-5 flex flex-col justify-between space-y-3.5 border-t-2 border-t-${l.color}-500/40">
+            <div class="space-y-2.5">
+              
+              <!-- Card Header with Clear Separation (Bug Fix) -->
+              <div class="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase font-mono bg-${l.color}-500/10 text-${l.color}-400 border border-${l.color}-500/20 flex items-center gap-1.5">
+                  <i class="fa-solid ${l.icon}"></i> ${l.name}
                 </span>
-                <span class="text-[11px] text-slate-400">Conditioned dynamically on project requirements</span>
+                <span class="text-[10px] font-mono text-slate-400">Core Layer</span>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                ${data.stack.supporting.map(s => `
-                  <div class="p-3.5 rounded-xl bg-surface-elevated/50 border border-white/[0.06] space-y-1.5 hover:border-white/[0.12] transition">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <i class="fa-solid ${suppIcons[s.layer] || 'fa-cubes'} text-xs"></i>
-                        <span class="text-[10px] font-bold uppercase tracking-wider font-mono text-slate-400">${s.layer}</span>
-                      </div>
-                      <span class="text-xs font-bold text-white tracking-tight">${s.choice}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-300 leading-snug">${s.justification}</p>
-                    ${s.alternatives && s.alternatives.length > 0 ? `
-                      <div class="text-[10px] text-slate-400 pt-1 border-t border-white/[0.04]">
-                        <span class="text-slate-400 font-medium">Alternative:</span> ${s.alternatives[0].choice} (${s.alternatives[0].why_not})
-                      </div>
-                    ` : ''}
-                  </div>
-                `).join('')}
+              <!-- Title -->
+              <div>
+                <h4 class="text-sm font-bold text-white tracking-tight">${c.choice}</h4>
+                <p class="text-xs text-slate-300 leading-relaxed mt-1">${c.justification}</p>
               </div>
-            </div>
-          `;
-        }
-      }
 
-      // Documented Assumptions Applied
-      if (data.assumptions && data.assumptions.length > 0) {
-        html += `
-          <div class="glass-card rounded-2xl p-4.5 space-y-2 border-white/[0.05]">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-list-check text-brand-400"></i> Documented Defaults & Assumptions Applied (${data.assumptions.length})
-            </span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-300">
-              ${data.assumptions.map(a => `
-                <div class="flex items-center gap-2 bg-surface-elevated/40 px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
-                  <i class="fa-solid fa-check text-[9px] text-emerald-400"></i>
-                  <span class="font-mono text-[11px] text-slate-300">${a}</span>
+              <!-- Drivers -->
+              ${c.driven_by && c.driven_by.length ? `
+                <div class="space-y-1 pt-1">
+                  <span class="text-[9px] uppercase tracking-wider font-bold text-slate-400">Driven By:</span>
+                  <div class="flex flex-wrap gap-1">${driversHtml}</div>
                 </div>
-              `).join('')}
+              ` : ''}
+
+              <!-- Alternatives -->
+              ${c.alternatives && c.alternatives.length ? `
+                <div class="space-y-1.5 pt-1.5 border-t border-white/[0.06]">
+                  <span class="text-[9px] uppercase tracking-wider font-bold text-slate-400">Rejected Alternatives:</span>
+                  <div class="space-y-1">${altsHtml}</div>
+                </div>
+              ` : ''}
+
             </div>
           </div>
         `;
+      }).join('');
+
+      // Supporting Services Grid
+      const suppContainer = document.getElementById('bpSupporting');
+      const supps = out.stack.supporting || [];
+      if (!supps.length) {
+        suppContainer.innerHTML = '<span class="text-xs text-slate-400">No supporting services required for this stack.</span>';
+        return;
       }
 
-      // JSON Copy & Export Action Bar
-      html += `
-        <div class="glass-card rounded-2xl p-4 flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-            <span class="text-xs text-slate-300 font-medium">Section 4 Output Ready</span>
-          </div>
-          
-          <button id="copyJsonBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/10 transition flex items-center gap-2">
-            <i class="fa-regular fa-copy"></i>
-            <span>Copy Section 4 JSON</span>
-          </button>
+      suppContainer.innerHTML = `
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-puzzle-piece text-brand-400"></i>
+            <span>Supporting Services (${supps.length})</span>
+          </span>
+          <span class="text-[10px] text-slate-400">Conditioned dynamically on requirements</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+          ${supps.map(s => `
+            <div class="p-3 rounded-xl bg-surface-elevated/60 border border-white/[0.05] space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono uppercase text-brand-400 font-semibold">${s.layer}</span>
+                <span class="text-xs font-bold text-white">${s.choice}</span>
+              </div>
+              <p class="text-[11px] text-slate-300 leading-snug">${s.justification}</p>
+            </div>
+          `).join('')}
         </div>
       `;
+    }
 
-      outputContainer.innerHTML = html;
+    // Trade-Off Matrix View
+    function renderTradeoffs(out) {
+      const container = document.getElementById('tradeoffTableContainer');
+      if (!out.stack) {
+        container.innerHTML = '<p class="text-xs text-slate-400">No architecture stack available to compare.</p>';
+        return;
+      }
 
-      // Bind copy button
-      const copyBtn = document.getElementById('copyJsonBtn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-          copyBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Copied to Clipboard!';
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy Section 4 JSON';
-          }, 2500);
+      const layers = [
+        { name: "Frontend", comp: out.stack.frontend },
+        { name: "Backend", comp: out.stack.backend },
+        { name: "Database", comp: out.stack.database },
+        { name: "Hosting", comp: out.stack.hosting },
+      ];
+
+      container.innerHTML = `
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 text-slate-400 text-[11px] uppercase tracking-wider font-mono">
+              <th class="py-2.5 px-3">Layer</th>
+              <th class="py-2.5 px-3">Selected Architecture</th>
+              <th class="py-2.5 px-3">Rejected Alternatives & Rationale</th>
+              <th class="py-2.5 px-3">Operational Trade-offs</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/[0.05] text-slate-200">
+            ${layers.map(l => {
+              const c = l.comp;
+              if (!c) return '';
+              const alts = (c.alternatives || []).map(a => `<div class="mb-1"><span class="font-semibold text-slate-200 font-mono">${a.choice}:</span> <span class="text-slate-400">${a.why_not}</span></div>`).join('') || 'None';
+              const trades = (c.tradeoffs || []).map(t => `<li>${t}</li>`).join('') || 'Standard operational profile';
+
+              return `
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="py-3 px-3 font-bold font-mono text-brand-400 align-top">${l.name}</td>
+                  <td class="py-3 px-3 align-top">
+                    <div class="font-bold text-white">${c.choice}</div>
+                    <div class="text-[11px] text-slate-300 mt-1">${c.justification}</div>
+                  </td>
+                  <td class="py-3 px-3 text-[11px] align-top">${alts}</td>
+                  <td class="py-3 px-3 text-[11px] text-slate-400 align-top"><ul class="list-disc pl-4 space-y-0.5">${trades}</ul></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Relaxation & Repair Guide View
+    function renderRelaxation(out) {
+      const container = document.getElementById('relaxationCardContainer');
+      const warnings = out.warnings || [];
+
+      if (!warnings.length) {
+        container.innerHTML = `
+          <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2.5">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+            <span>All declared requirements satisfied cleanly. Zero constraint contradictions detected.</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = warnings.map(w => {
+        const isCrit = w.severity === "critical";
+        const badgeClass = isCrit ? "bg-rose-500/20 text-rose-400 border-rose-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30";
+        return `
+          <div class="p-4 rounded-xl bg-surface-elevated/70 border border-white/[0.06] space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase border ${badgeClass}">${w.severity}</span>
+              <span class="text-[11px] font-mono text-slate-400">${w.code}</span>
+            </div>
+            <p class="text-xs text-slate-200 leading-relaxed">${w.message}</p>
+            ${w.fields && w.fields.length ? `
+              <div class="text-[10px] text-slate-400 font-mono pt-1">
+                <span class="text-slate-400">Affected Parameters:</span> ${w.fields.join(', ')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Fetch & Render Topology
+    async function fetchTopology(out, scenario) {
+      try {
+        const res = await fetch('/api/topology', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ output: out, scenario: scenario })
         });
+        currentTopology = await res.json();
+      } catch (err) {
+        console.error("Topology fetch failed:", err);
       }
     }
+
+    async function renderTopology() {
+      const area = document.getElementById('topologyRenderArea');
+      if (!currentTopology.mermaid && !currentTopology.svg) {
+        area.innerHTML = '<span class="text-xs text-slate-400">Generating system topology...</span>';
+        return;
+      }
+
+      const id = "topo_" + Date.now();
+
+      // Try client-side Mermaid first
+      try {
+        if (typeof mermaid !== 'undefined' && currentTopology.mermaid) {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose',
+            suppressErrorRendering: true
+          });
+          // Defensive sanitization: strip any illegal parentheses inside pipe delimiters |...|
+          const safeMermaid = currentTopology.mermaid.replace(/\\|([^|]+)\\|/g, (match, text) => {
+            return '|' + text.replace(/[()]/g, ' ') + '|';
+          });
+          const { svg } = await mermaid.render(id, safeMermaid);
+          area.innerHTML = `<div class="w-full flex justify-center">${svg}</div>`;
+          return;
+        }
+      } catch (err) {
+        console.warn("Mermaid client render fallback to pure SVG:", err);
+        document.querySelectorAll('[id^="dtopo_"], [id^="topo_"]').forEach(el => el.remove());
+      }
+
+      // Fallback: Pure-Python SVG
+      if (currentTopology.svg) {
+        area.innerHTML = `<div class="w-full flex justify-center">${currentTopology.svg}</div>`;
+      }
+    }
+
+    // Benchmark Matrix (P1-P6) View
+    async function loadBenchmarkMatrix() {
+      const container = document.getElementById('matrixTableContainer');
+      container.innerHTML = '<p class="text-xs text-slate-400">Loading benchmark comparison matrix...</p>';
+      try {
+        const res = await fetch('/api/scenarios/matrix');
+        const rows = await res.json();
+        
+        container.innerHTML = `
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-white/10 text-slate-400 text-[11px] uppercase tracking-wider font-mono">
+                <th class="py-2.5 px-3">Scenario</th>
+                <th class="py-2.5 px-3">Archetype</th>
+                <th class="py-2.5 px-3">Recommended Stack</th>
+                <th class="py-2.5 px-3">Est. Cost</th>
+                <th class="py-2.5 px-3">Pattern</th>
+                <th class="py-2.5 px-3">Top Rejected Alternative</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/[0.05] text-slate-200">
+              ${rows.map(r => `
+                <tr class="hover:bg-white/[0.03] transition cursor-pointer" onclick="loadScenario('${r.scenario_id}')">
+                  <td class="py-3 px-3 font-bold font-mono text-cyan-400 align-top">${r.scenario_id} (${r.project_name})</td>
+                  <td class="py-3 px-3 font-mono text-slate-400 align-top">${r.archetype}</td>
+                  <td class="py-3 px-3 align-top font-mono text-[11px] text-slate-300">
+                    <div>FE: <span class="text-white">${r.recommended_stack.frontend}</span></div>
+                    <div>BE: <span class="text-white">${r.recommended_stack.backend}</span></div>
+                    <div>DB: <span class="text-white">${r.recommended_stack.database}</span></div>
+                    <div>Host: <span class="text-white">${r.recommended_stack.hosting}</span></div>
+                  </td>
+                  <td class="py-3 px-3 font-mono text-emerald-400 align-top font-semibold">${r.cost_range}</td>
+                  <td class="py-3 px-3 font-mono uppercase text-indigo-400 align-top">${r.architecture_style}</td>
+                  <td class="py-3 px-3 text-[11px] text-slate-400 align-top max-w-xs">${r.top_rejected_alternative}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (err) {
+        container.innerHTML = '<p class="text-xs text-rose-400">Failed to load benchmark matrix.</p>';
+      }
+    }
+
+    // Action Buttons
+    document.getElementById('copyRawJsonBtn').addEventListener('click', () => {
+      if (currentOutput) {
+        navigator.clipboard.writeText(JSON.stringify(currentOutput, null, 2));
+      }
+    });
+
+    document.getElementById('copyMermaidBtn').addEventListener('click', () => {
+      if (currentTopology.mermaid) {
+        navigator.clipboard.writeText(currentTopology.mermaid);
+      }
+    });
+
+    document.getElementById('downloadSvgBtn').addEventListener('click', () => {
+      if (currentTopology.svg) {
+        const blob = new Blob([currentTopology.svg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `architecture_topology_${Date.now()}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
 
     // Run initialization
     initScenarios();

@@ -109,7 +109,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_HIGH_SCALE_ZERO_BUDGET",
                 severity=WarningSeverity.CRITICAL,
-                message="High user scale (>10,000 launch or >50,000 12-month users) cannot be sustained on a $0 monthly budget without severe service degradation.",
+                message=(
+                    "High user scale (>10,000 launch or >50,000 12-month users) cannot be sustained on a $0 monthly budget without severe service degradation. "
+                    "Relaxation suggestion: Allocate a minimum infrastructure budget of $50-$100/mo for serverless/managed compute, or constrain initial launch users to <1,000."
+                ),
                 fields=["scale.users_at_launch", "scale.users_12_months", "budget.monthly_infra_usd"],
             )
         )
@@ -120,7 +123,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_AVAILABILITY_SOLO_BEGINNER",
                 severity=WarningSeverity.CRITICAL,
-                message="99.99% availability (less than 53 minutes of downtime per year) requires 24/7 on-call rotations, redundant infrastructure, and multi-region failover, which cannot be operated by a single beginner engineer.",
+                message=(
+                    "99.99% availability (less than 53 minutes of downtime per year) requires 24/7 on-call rotations, redundant infrastructure, and multi-region failover, which cannot be operated by a single beginner engineer. "
+                    "Relaxation suggestion: Lower target availability to 99.5% (standard single-region high availability) or contract managed 24/7 SRE/PaaS support."
+                ),
                 fields=["requirements.availability", "team.size", "team.experience"],
             )
         )
@@ -131,7 +137,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_TIGHT_TIMELINE_MANY_PLATFORMS",
                 severity=WarningSeverity.WARNING,
-                message=f"Targeting {len(scenario.project.platforms)} platforms ({', '.join(p.value for p in scenario.project.platforms)}) within a {scenario.timeline.mvp_weeks}-week timeline with a {scenario.team.size}-person team creates extreme delivery risk.",
+                message=(
+                    f"Targeting {len(scenario.project.platforms)} platforms ({', '.join(p.value for p in scenario.project.platforms)}) within a {scenario.timeline.mvp_weeks}-week timeline with a {scenario.team.size}-person team creates extreme delivery risk. "
+                    "Relaxation suggestion: Focus initial MVP strictly on Web or adopt cross-platform React Native/Flutter to ship from a single codebase."
+                ),
                 fields=["timeline.mvp_weeks", "project.platforms", "team.size"],
             )
         )
@@ -142,7 +151,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_ON_PREM_CLOUD_PREFERENCE",
                 severity=WarningSeverity.CRITICAL,
-                message=f"Deployment model '{scenario.infrastructure.deployment_model.value}' is incompatible with managed public cloud preference '{scenario.infrastructure.cloud_preference.value}'.",
+                message=(
+                    f"Deployment model '{scenario.infrastructure.deployment_model.value}' is incompatible with managed public cloud preference '{scenario.infrastructure.cloud_preference.value}'. "
+                    "Relaxation suggestion: Set cloud_preference to 'none' and deploy on-premise containerized solutions (e.g. MinIO, local PostgreSQL, Docker)."
+                ),
                 fields=["infrastructure.deployment_model", "infrastructure.cloud_preference"],
             )
         )
@@ -153,7 +165,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_OFFLINE_API_ONLY",
                 severity=WarningSeverity.CRITICAL,
-                message="Offline support requested for an api_only platform, but APIs inherently require client-server network connectivity.",
+                message=(
+                    "Offline support requested for an api_only platform, but APIs inherently require client-server network connectivity. "
+                    "Relaxation suggestion: Include a client application platform (e.g., mobile or desktop with local SQLite caching) or remove the offline_support requirement."
+                ),
                 fields=["requirements.offline_support", "project.platforms"],
             )
         )
@@ -164,7 +179,10 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
             WarningItem(
                 code="CONTRADICTION_ULTRA_LOW_LATENCY_LOW_BUDGET",
                 severity=WarningSeverity.WARNING,
-                message=f"Target latency of {scenario.requirements.p95_latency_ms}ms p95 typically requires dedicated multi-region edge caches or in-memory clusters exceeding the ${scenario.budget.monthly_infra_usd}/month budget.",
+                message=(
+                    f"Target latency of {scenario.requirements.p95_latency_ms}ms p95 typically requires dedicated multi-region edge caches or in-memory clusters exceeding the ${scenario.budget.monthly_infra_usd}/month budget. "
+                    "Relaxation suggestion: Increase monthly budget to at least $100-$150/mo or relax target p95 latency to 150-200ms."
+                ),
                 fields=["requirements.p95_latency_ms", "budget.monthly_infra_usd"],
             )
         )
@@ -189,7 +207,7 @@ def detect_contradictions(scenario: ScenarioInput) -> list[WarningItem]:
                     WarningItem(
                         code="DEPRECATED_TECHNOLOGY_DETECTED",
                         severity=WarningSeverity.WARNING,
-                        message=f"Existing system '{sys_item}' has reached end-of-life or been retired: {dep_msg} It should be targeted for modernization and not relied on for long-term production.",
+                        message=f"Existing system '{sys_item}' has reached end-of-life or been retired: {dep_msg} Relaxation suggestion: Target '{sys_item}' for modernization and migrate to supported equivalents rather than extending legacy dependencies.",
                         fields=["infrastructure.existing_systems"],
                     )
                 )

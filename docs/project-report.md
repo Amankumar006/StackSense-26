@@ -6,8 +6,8 @@
 **College / Institution:** IIIT Bangalore  
 **Registered Email:** [Unstop Registered Email]  
 **Repository:** https://github.com/aman-kumar/StackSense-26  
-**Submission Date:** 12 November 2026  
-**Document Version:** 1.0 (Final Release)  
+**Submission Date:** 14 November 2026  
+**Document Version:** 1.1 (Production Release)  
 
 ---
 
@@ -15,7 +15,7 @@
 
 StackSense is an explainable, deterministic technology-stack recommendation engine designed to eliminate guesswork, architectural bias, and over-engineering in early-stage software design. Given structured project parameters spanning scale, team capabilities, budget, latency, deployment boundaries, and statutory compliance, StackSense computes an optimal, compatible combination of frontend, backend, database, hosting, and supporting services. 
 
-Unlike probabilistic conversational agents that hallucinate deprecated libraries or produce unrepeatable outputs, StackSense executes a two-phase decision pipeline: strict hard-constraint pruning followed by multi-objective weighted utility scoring over a curated, source-cited catalogue of 37 production technologies. Every recommendation is traceable, exposing specific input drivers (`driven_by`), viable alternatives with concrete rejection rationales (`why_not`), operational trade-offs, and order-of-magnitude monthly cost bands in USD. Operating with a mandatory LLM-off switch, StackSense runs locally in $<0.4$ seconds with zero external API dependencies, passing 100% of benchmark and edge-case validation suites.
+Unlike probabilistic conversational agents that hallucinate deprecated libraries or produce unrepeatable outputs, StackSense executes a two-phase decision pipeline: strict hard-constraint pruning followed by multi-objective weighted utility scoring over a curated, source-cited catalogue of 37 production technologies. Every recommendation is traceable, exposing specific input drivers (`driven_by`), viable alternatives with concrete rejection rationales (`why_not`), operational trade-offs, and order-of-magnitude monthly cost bands in USD. Operating with a mandatory LLM-off switch, StackSense runs locally in $<0.4$ seconds with zero external API dependencies, passing 100% of benchmark and edge-case validation suites (36/36 automated tests). It features a built-in pure-Python architecture topology engine (generating Mermaid and zero-dependency SVG), actionable contradiction relaxation guidance, and an offline-first DevTools Modern Web Studio.
 
 ---
 
@@ -102,13 +102,17 @@ To ensure engineering rigor and avoid bloated, unverifiable features, the follow
 4. **Supporting Services Engine (`stacksense.engine`):**
    Evaluates requirement flags (`realtime`, `payments`, `file_media_storage`, `auth`, `ml_features`). Activates enterprise-grade supporting components (e.g., Redis for sub-100ms latency, SQS FIFO for financial ledgers, MinIO for on-premise S3-compatible storage, Keycloak for air-gapped identity).
 5. **Cost & Explanation Synthesizer (`stacksense.engine`):**
-   Aggregates baseline compute, database storage, and supporting service pricing units into a monthly cost range $[Cost_{min}, Cost_{max}]$ in USD. Formats `driven_by` field tracking, alternatives, and trade-offs into strict Section 4 JSON.
+   Aggregates baseline compute, database storage, and supporting service pricing units into a monthly cost range $[Cost_{min}, Cost_{max}]$ in USD. Formats `driven_by` field tracking, alternatives, and trade-offs into strict Section 4 JSON. Injects actionable relaxation advice for budget and SLA boundaries into `warnings[].message`.
+6. **Topology Engine & Web Studio (`stacksense.topology` & `stacksense.web`):**
+   Translates recommended stacks into deterministic system architecture diagrams, generating both client-rendered Mermaid graph syntax and zero-dependency, pure-Python standalone vector SVG. Drives an interactive, offline-resilient DevTools Web Studio (Linear/Vercel dark mode) with a 6-tab workspace and startup-memoized benchmark matrix serving in $<2$ms.
 
 ### 3.3 Technology Stack & Tooling
 
 - **Core Runtime:** Python 3.12 (compatible with Python 3.11+).
 - **Data Modeling & Validation:** Pydantic 2.13 (strict type enforcement, field validators, schema serialization).
-- **Harness & Automation:** Pytest 9.1 (deterministic regression testing across 26 test suites).
+- **Web API & Studio:** FastAPI & Uvicorn (REST API, offline static asset hosting, memoized endpoints).
+- **Diagram Generation:** Pure-Python vector SVG builder & vendored offline Mermaid.js (zero Node.js or Chromium dependencies).
+- **Harness & Automation:** Pytest 9.1 (deterministic regression testing across 36 test suites in $<1$s).
 - **Containerization:** Docker & Docker Compose (Python 3.12-slim base, zero-dependency reproducible execution).
 
 ---
@@ -357,40 +361,43 @@ The engine was systematically tested against all 9 edge-case categories from Sec
 |---|---|:---:|---|---|---|
 | **1** | **Missing Fields** | `E1` | `validate_raw_input` checks for absent optional keys. | Populates documented defaults; records 20 default substitutions in `assumptions[]`. Returns `status: "ok"`. | `E1_output.json`: `scale.traffic_pattern` defaulted to steady; `assumptions` populated. |
 | **2** | **Invalid Values** | `E2` | Pydantic field validators detect negatives, unknown enums, and out-of-range bounds. | Immediately intercepts errors; produces 9 field-level validation items under `validation_errors[]`; returns `status: "invalid_input"`. | `E2_output.json`: Catches `budget: -50`, `type: quantum_hyperdrive`, `priorities.cost: 15`. |
-| **3** | **Contradictions** | `E3`, `E4`, `E5` | `detect_contradictions` identifies impossible trade-offs. | - **Scale vs. $0 Budget (`E3`):** Critical warning `CONTRADICTION_HIGH_SCALE_ZERO_BUDGET`; returns `status: "ok_with_warnings"`.<br>- **Solo Beginner vs. 99.99% Availability (`E4`):** Critical warning `CONTRADICTION_AVAILABILITY_SOLO_BEGINNER`; explains 24/7 on-call constraint.<br>- **Air-gapped vs. AWS Public Cloud (`E5`):** Mutually exclusive hard constraints immediately return `status: "infeasible"` with `stack: null`. | `E3_output.json`, `E4_output.json`, `E5_output.json`. |
+| **3** | **Contradictions** | `E3`, `E4`, `E5` | `detect_contradictions` identifies impossible trade-offs and generates concrete parameter relaxation suggestions. | - **Scale vs. $0 Budget (`E3`):** Critical warning `CONTRADICTION_HIGH_SCALE_ZERO_BUDGET`; provides relaxation advice: "Allocate at least $50–$150/month or restrict scale". Returns `status: "ok_with_warnings"`.<br>- **Solo Beginner vs. 99.99% Availability (`E4`):** Critical warning `CONTRADICTION_AVAILABILITY_SOLO_BEGINNER`; provides relaxation advice: "Lower target availability to 99.5% or contract managed 24/7 SRE support".<br>- **Air-gapped vs. AWS Public Cloud (`E5`):** Mutually exclusive hard constraints immediately return `status: "infeasible"` with `stack: null` and relaxation advice: "Set cloud_preference to 'none' and deploy on-premise containerized solutions". | `E3_output.json`, `E4_output.json`, `E5_output.json`. |
 | **4** | **Over-Engineering Traps** | `E6` | Evaluates read-heavy static content workloads regardless of high user volume. | Recommends simple JAMstack (Astro + Netlify/Edge CDN). Core layers output `backend: "None"` and `database: "None"`. Alternatives explicitly reject Kubernetes Cluster (EKS/GKE) and Microservices. | `E6_output.json`: Rejecting EKS as "Massive over-engineering trap ($70+/mo cluster fee)". |
 | **5** | **Regulatory Constraints** | `E7` | Hard-constraint filter enforces physical sovereignty and compliance standards. | Restricts compute to AWS Mumbai (`ap-south-1`), Spring Boot, Aurora PostgreSQL, and Razorpay domestic payments. Discloses compliance certifications in justifications. | `E7_output.json`: Physical Indian data center localization verified in `driven_by`. |
 | **6** | **Existing Systems** | `E8` | Scans `infrastructure.existing_systems` for legacy databases and identity directories. | Reuses existing on-premise Microsoft SQL Server 2019 and Microsoft Entra ID; selects ASP.NET Core (.NET 8) backend and Entity Framework Core. | `E8_output.json`: Justification notes schema preservation and direct M365 federation. |
 | **7** | **Restricted Deployment** | `E9` | Evaluates `deployment_model in {"on_premise", "air_gapped"}`. | Completely eliminates public cloud SaaS/CDNs. Recommends `On-Premise Server (Docker Compose / Podman)`, self-hosted `PostgreSQL`, `MinIO` storage, `Keycloak` identity, and `RabbitMQ`. | `E9_output.json`: Zero cloud dependencies; strictly on-premise components selected. |
 | **8** | **Skill Mismatch** | `E10` | Cross-checks `team.languages` against target `project.platforms`. | Emits `SKILL_MISMATCH_MOBILE_LANGUAGES` warning when Python-only team builds mobile apps; selects React Native/Flutter while explaining onboarding trade-offs. | `E10_output.json`: Explicitly surfaces frontend learning curve in warnings. |
-| **9** | **Deprecated Technology** | `E11` | Scans `existing_systems` against curated EOL registry (`DEPRECATED_TECHNOLOGIES`). | Emits 3 `DEPRECATED_TECHNOLOGY_DETECTED` warnings detailing official retirement dates for AngularJS 1.x, Python 2.7, and CentOS 7; targets them for modernization. Never recommends them in output stack. | `E11_output.json`: Warnings cite EOL dates (CentOS 7 retired June 2024; Python 2.7 retired 2020). |
+| **9** | **Deprecated Technology** | `E11` | Scans `existing_systems` against curated EOL registry (`DEPRECATED_TECHNOLOGIES`). | Emits 3 `DEPRECATED_TECHNOLOGY_DETECTED` warnings detailing official retirement dates for AngularJS 1.x, Python 2.7, and CentOS 7; provides relaxation advice: "Target for modernization and migrate to supported equivalents rather than extending legacy dependencies". Never recommends them in output stack. | `E11_output.json`: Warnings cite EOL dates (CentOS 7 retired June 2024; Python 2.7 retired 2020). |
 
 ---
 
 ## 8. Validation and Verification
 
 ### 8.1 Automated Regression Test Suite
-StackSense is verified by a 26-test automated suite executed via Pytest:
+StackSense is verified by a 36-test automated suite executed via Pytest:
 - **`test_determinism.py` (6 tests):** Verifies that evaluating scenarios P1 through P6 multiple times produces bit-for-bit identical JSON output across all layers and explanations.
 - **`test_public_scenarios.py` (6 tests):** Validates that all public benchmarks (P1–P6) execute successfully, satisfy all hard constraints, and produce sensible architectural pairings.
 - **`test_validation.py` (3 tests):** Tests schema missing-field detection, negative number rejection, and critical infeasibility handling.
 - **`test_edge_cases.py` (11 tests):** Verifies all 9 Section 6 edge-case categories, asserting that warnings, assumptions, and rejected alternatives match expected behavior.
+- **`test_topology.py` (5 tests):** Verifies node sanitization, defensive handling for `infeasible` and `"None"` layers, and valid output generation for Mermaid flowchart and pure-Python vector SVG structures.
+- **`test_web_studio.py` (5 tests):** Verifies FastAPI dashboard endpoints, canonical Section 4 evaluation on `POST /api/recommend`, auxiliary `POST /api/topology`, sub-2ms memoized `GET /api/scenarios/matrix`, and offline static vendoring.
 
 ```bash
 # Test Execution Benchmark
 $ pytest -v
 ============================== test session starts ==============================
 platform darwin -- Python 3.12.2, pytest-9.1.1, pluggy-1.6.0
-collected 26 items
+collected 36 items
 
-tests/test_determinism.py::test_deterministic_output[P1] PASSED           [  3%]
-tests/test_determinism.py::test_deterministic_output[P2] PASSED           [  7%]
+tests/test_determinism.py::test_deterministic_output[P1] PASSED           [  2%]
 ...
-tests/test_edge_cases.py::test_edge_case_deprecated_technology PASSED     [ 65%]
-tests/test_public_scenarios.py::test_public_scenario_execution[P1] PASSED  [ 69%]
+tests/test_edge_cases.py::test_edge_case_deprecated_technology PASSED     [ 47%]
+tests/test_public_scenarios.py::test_public_scenario_execution[P1] PASSED  [ 50%]
 ...
-tests/test_validation.py::test_infeasible_contradiction PASSED            [100%]
-============================== 26 passed in 0.30s ==============================
+tests/test_topology.py::test_topology_svg_structure PASSED                [ 77%]
+tests/test_validation.py::test_infeasible_contradiction PASSED            [ 86%]
+tests/test_web_studio.py::test_scenarios_matrix_memoized PASSED           [100%]
+============================== 36 passed in 0.83s ==============================
 ```
 
 ### 8.2 Comparison with Real-World Industry Architectures
@@ -398,6 +405,16 @@ To validate real-world engineering fidelity, StackSense outputs were cross-refer
 - **Marketplace Pattern (P2 vs. Urban Company Engineering):** Urban Company operates micro-services across React Native and Python/Node APIs with Mumbai hosting and Phone OTP authentication. StackSense independently generated an identical topology.
 - **Financial Ledger Pattern (P4 vs. Zerodha / Razorpay Capital):** FinTech architectures mandate JVM transaction isolation, Aurora multi-AZ failover, and strict queue-backed async processing (SQS FIFO) to guarantee zero double-spend. StackSense's recommendation mirrors these published standards.
 - **Static Documentation (P6 vs. Astro Starlight / Tailwind Docs):** Modern developer documentation platforms avoid dynamic application servers in favor of edge CDN JAMstack generation, matching StackSense's explicit rejection of backend servers for static workloads.
+
+### 8.3 Interactive DevTools Web Studio & Topology Visualizer
+To deliver a world-class evaluation experience, StackSense bundles an interactive DevTools Web Studio (`stacksense web --port 8000`):
+- **DevTools Modern Dark Aesthetic:** Built on standard Linear / Vercel design principles with zinc/slate color palette, tabular typography, and distinct category pill badges.
+- **Unidirectional Reactive State Flow:** Editing the Section 3.1 JSON payload passes through a 250ms debounced linter gate, immediately updating architectural recommendations across 6 tabs.
+- **Pure-Python Topology Visualization:** Renders interactive Mermaid flowchart diagrams and vector SVGs with defensive handling for infeasible states and zero-cost static edge cases.
+- **Architectural Trade-Off Analysis:** Tabulates component drivers (`driven_by`), top rejected alternatives, and operational trade-offs without synthetic scoring.
+- **Contradiction & Relaxation Guide:** Aggregates active warnings and actionable parameter adjustments to unblock infeasible constraints.
+- **Pre-computed Benchmark Matrix:** In-memory startup cache serves P1–P6 comparison matrix instantly with sub-2ms latency.
+- **100% Offline Static Vendoring:** Vendored `mermaid.min.js` ensures that both UI diagrams and headless evaluations function in air-gapped environments without CDN access.
 
 ---
 

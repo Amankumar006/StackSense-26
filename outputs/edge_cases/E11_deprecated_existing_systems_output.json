@@ -112,7 +112,7 @@
     {
       "code": "DEPRECATED_TECHNOLOGY_DETECTED",
       "severity": "warning",
-      "message": "Existing system 'AngularJS 1.5 Single Page App' has reached end-of-life or been retired: AngularJS (1.x) reached end-of-life on January 1, 2022 and no longer receives security updates. It should be targeted for modernization and not relied on for long-term production.",
+      "message": "Existing system 'AngularJS 1.5 Single Page App' has reached end-of-life or been retired: AngularJS (1.x) reached end-of-life on January 1, 2022 and no longer receives security updates. Relaxation suggestion: Target 'AngularJS 1.5 Single Page App' for modernization and migrate to supported equivalents rather than extending legacy dependencies.",
       "fields": [
         "infrastructure.existing_systems"
       ]
@@ -120,7 +120,7 @@
     {
       "code": "DEPRECATED_TECHNOLOGY_DETECTED",
       "severity": "warning",
-      "message": "Existing system 'Python 2.7 Monolithic API Server' has reached end-of-life or been retired: Python 2.7 reached official end-of-life on January 1, 2020. It should be targeted for modernization and not relied on for long-term production.",
+      "message": "Existing system 'Python 2.7 Monolithic API Server' has reached end-of-life or been retired: Python 2.7 reached official end-of-life on January 1, 2020. Relaxation suggestion: Target 'Python 2.7 Monolithic API Server' for modernization and migrate to supported equivalents rather than extending legacy dependencies.",
       "fields": [
         "infrastructure.existing_systems"
       ]
@@ -128,7 +128,7 @@
     {
       "code": "DEPRECATED_TECHNOLOGY_DETECTED",
       "severity": "warning",
-      "message": "Existing system 'CentOS 7 Production Virtual Machine' has reached end-of-life or been retired: CentOS 7 reached end-of-life on June 30, 2024. It should be targeted for modernization and not relied on for long-term production.",
+      "message": "Existing system 'CentOS 7 Production Virtual Machine' has reached end-of-life or been retired: CentOS 7 reached end-of-life on June 30, 2024. Relaxation suggestion: Target 'CentOS 7 Production Virtual Machine' for modernization and migrate to supported equivalents rather than extending legacy dependencies.",
       "fields": [
         "infrastructure.existing_systems"
       ]

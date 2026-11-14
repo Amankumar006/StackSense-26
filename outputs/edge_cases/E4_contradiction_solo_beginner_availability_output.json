@@ -130,7 +130,7 @@
     {
       "code": "CONTRADICTION_AVAILABILITY_SOLO_BEGINNER",
       "severity": "critical",
-      "message": "99.99% availability (less than 53 minutes of downtime per year) requires 24/7 on-call rotations, redundant infrastructure, and multi-region failover, which cannot be operated by a single beginner engineer.",
+      "message": "99.99% availability (less than 53 minutes of downtime per year) requires 24/7 on-call rotations, redundant infrastructure, and multi-region failover, which cannot be operated by a single beginner engineer. Relaxation suggestion: Lower target availability to 99.5% (standard single-region high availability) or contract managed 24/7 SRE/PaaS support.",
       "fields": [
         "requirements.availability",
         "team.size",

@@ -2,12 +2,12 @@
   "scenario_id": "E5",
   "engine_version": "1.0.0",
   "status": "infeasible",
-  "summary": "Infeasible scenario: Deployment model 'air_gapped' is incompatible with managed public cloud preference 'aws'.",
+  "summary": "Infeasible scenario: Deployment model 'air_gapped' is incompatible with managed public cloud preference 'aws'. Relaxation suggestion: Set cloud_preference to 'none' and deploy on-premise containerized solutions (e.g. MinIO, local PostgreSQL, Docker).",
   "warnings": [
     {
       "code": "CONTRADICTION_ON_PREM_CLOUD_PREFERENCE",
       "severity": "critical",
-      "message": "Deployment model 'air_gapped' is incompatible with managed public cloud preference 'aws'.",
+      "message": "Deployment model 'air_gapped' is incompatible with managed public cloud preference 'aws'. Relaxation suggestion: Set cloud_preference to 'none' and deploy on-premise containerized solutions (e.g. MinIO, local PostgreSQL, Docker).",
       "fields": [
         "infrastructure.deployment_model",
         "infrastructure.cloud_preference"

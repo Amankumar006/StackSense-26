@@ -106,15 +106,20 @@ class RecommendationEngine:
         status = EngineStatus.OK
         if scenario.budget.monthly_infra_usd > 0 and total_min > scenario.budget.monthly_infra_usd:
             status = EngineStatus.OK_WITH_WARNINGS
+            delta = total_min - scenario.budget.monthly_infra_usd
             warnings.append(
                 WarningItem(
                     code="BUDGET_OVERRUN_SOFT_RELAXATION",
                     severity=WarningSeverity.WARNING,
-                    message=f"Estimated minimum monthly cost (${total_min:.0f}) exceeds the declared monthly budget (${scenario.budget.monthly_infra_usd:.0f}). Soft budget constraint relaxed to satisfy compliance, scale, and availability requirements.",
+                    message=(
+                        f"Estimated minimum monthly cost (${total_min:.0f}) exceeds the declared monthly budget (${scenario.budget.monthly_infra_usd:.0f}). "
+                        f"Soft budget constraint relaxed to satisfy compliance, scale, and availability requirements. "
+                        f"Relaxation suggestion: Increase monthly infrastructure budget from ${scenario.budget.monthly_infra_usd:.0f} to at least ${total_min:.0f} (delta +${delta:.0f}/mo) or consolidate services onto single-node compute."
+                    ),
                     fields=["budget.monthly_infra_usd"],
                 )
             )
-            assumptions.append(f"Budget relaxed by ${total_min - scenario.budget.monthly_infra_usd:.0f}/month to achieve required SLA and compliance.")
+            assumptions.append(f"Budget relaxed by ${delta:.0f}/month (from ${scenario.budget.monthly_infra_usd:.0f} to ${total_min:.0f}) to achieve required SLA and compliance.")
         elif any(w.severity == WarningSeverity.CRITICAL for w in warnings):
             status = EngineStatus.OK_WITH_WARNINGS
         elif any(w.severity == WarningSeverity.WARNING for w in warnings):
