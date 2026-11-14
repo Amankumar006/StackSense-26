@@ -197,10 +197,11 @@ def get_topology(req: TopologyRequest) -> dict[str, str]:
 @app.get("/api/download-report")
 def download_report():
     """Serves the generated official Project Report PDF."""
-    if not REPORT_PATH.is_file():
+    report = REPORT_PATH if REPORT_PATH.is_file() else Path("..") / REPORT_PATH
+    if not report.is_file():
         raise HTTPException(status_code=404, detail="Report PDF not generated yet.")
     return FileResponse(
-        path=REPORT_PATH,
+        path=report,
         filename="Report_Aman_Kumar.pdf",
         media_type="application/pdf",
     )

@@ -83,9 +83,7 @@ StackSense takes structured project parameters (scale, team experience and langu
 
 ### Option A: Python Virtual Environment (Recommended, <1 minute)
 ```bash
-# 1. Clone repository and navigate to workspace
-git clone <repo-url>
-cd StackSence-'26
+# 1. Open the project root (source/ in the submission bundle)
 
 # 2. Create and activate a clean virtual environment
 python3 -m venv .venv
@@ -95,6 +93,17 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
 ```
+
+### Browser Studio
+
+From the project root, activate the virtual environment and run:
+
+```bash
+python -m pip install fastapi==0.141.1 uvicorn==0.34.0
+python -m uvicorn stacksense.web:app --host 127.0.0.1 --port 8000
+```
+
+Open http://127.0.0.1:8000 to load a scenario preset or edit a scenario in the form or JSON editor. In the submission bundle, the report sits alongside `source/`.
 
 ### Option B: Docker Compose Setup (Zero local Python dependencies)
 ```bash
@@ -131,6 +140,7 @@ python -m stacksense.cli batch data/scenarios/ --output-dir outputs/
 
 ### Run Automated Tests
 ```bash
+python -m pip install -e '.[test]' httpx
 python -m pytest -v
 ```
 

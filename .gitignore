@@ -1,14 +1,25 @@
-# Python
+# Hidden files and directories at every level
+.*
+!/.gitignore
+
+# Python and generated metadata
 __pycache__/
 *.py[cod]
-.venv/
 venv/
+*.egg-info/
+build/
 
-# Tooling and coverage
-.pytest_cache/
-.mypy_cache/
-.coverage
+# Coverage and local editor files
 htmlcov/
+*.iml
+*.ipr
+*.iws
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
 
 # Generated competition artifacts
 artifacts/
@@ -16,11 +27,3 @@ dist/
 reports/*.pdf
 screenshots/*.png
 screenshots/*.jpg
-
-# Local environment and editor files
-.env
-.env.*
-!.env.example
-.DS_Store
-.idea/
-.vscode/
